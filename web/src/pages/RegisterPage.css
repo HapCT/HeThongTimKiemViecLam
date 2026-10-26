@@ -1,0 +1,174 @@
+/* RegisterPage.css */
+
+.register-container {
+  min-height: 85vh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #1e3a8a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+}
+
+.register-box {
+  width: 100%;
+  max-width: 540px;
+}
+
+/* Brand Header */
+.register-brand-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.register-brand-title {
+  color: #ffffff !important;
+  margin: 0 !important;
+  font-weight: 800 !important;
+}
+
+.register-brand-accent {
+  color: #60a5fa;
+}
+
+.register-brand-subtitle {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+/* Card */
+.register-card {
+  border-radius: 0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25) !important;
+  background: #ffffff !important;
+}
+
+.register-card .ant-card-body {
+  padding: 36px 32px !important;
+}
+
+.register-card-header {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.register-card-title {
+  margin: 0 !important;
+  color: #0f172a !important;
+  font-weight: 800 !important;
+}
+
+.register-card-desc {
+  font-size: 13px;
+}
+
+/* Role Selector */
+.register-role-section {
+  margin-bottom: 24px;
+}
+
+.register-role-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  color: #334155;
+}
+
+.register-role-group {
+  width: 100%;
+  display: flex !important;
+}
+
+.register-role-group .ant-radio-button-wrapper {
+  flex: 1;
+  text-align: center;
+  height: 44px;
+  line-height: 42px;
+  font-weight: 600;
+  border-radius: 0 !important;
+}
+
+.register-role-group .ant-radio-button-wrapper:first-child,
+.register-role-group .ant-radio-button-wrapper:last-child {
+  border-radius: 0 !important;
+}
+
+/* Form Styles */
+.register-form .ant-form-item-label > label {
+  font-weight: 600;
+}
+
+.register-form .ant-input-affix-wrapper,
+.register-form .ant-input,
+.register-form .ant-input-password {
+  border-radius: 0 !important;
+}
+
+.register-input-icon {
+  color: #94a3b8;
+}
+
+/* Tax Code Verification */
+.register-tax-compact {
+  width: 100%;
+}
+
+.register-tax-input,
+.register-tax-compact .ant-input {
+  border-radius: 0 !important;
+}
+
+.register-tax-btn {
+  border-radius: 0 !important;
+  background: #0d9488 !important;
+  border-color: #0d9488 !important;
+  font-weight: 600 !important;
+}
+
+.register-tax-result {
+  margin-bottom: 16px;
+}
+
+.register-tax-result .ant-alert {
+  border-radius: 0 !important;
+}
+
+.register-tax-result-content {
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.register-tax-result-status {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+/* Submit Button */
+.register-submit-btn {
+  margin-top: 8px !important;
+  border-radius: 0 !important;
+  font-weight: 700 !important;
+  height: 46px !important;
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+  box-shadow: none !important;
+}
+
+.register-submit-btn:hover {
+  background: #1d4ed8 !important;
+  border-color: #1d4ed8 !important;
+}
+
+/* Footer Link */
+.register-footer {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.register-footer-link {
+  font-weight: 700;
+  color: #2563eb;
+}

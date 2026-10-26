@@ -1,0 +1,107 @@
+/* LoginPage.css */
+
+.login-container {
+  min-height: 85vh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #1e3a8a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+}
+
+.login-box {
+  width: 100%;
+  max-width: 480px;
+}
+
+/* Brand Header */
+.login-brand-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.login-brand-title {
+  color: #ffffff !important;
+  margin: 0 !important;
+  font-weight: 800 !important;
+}
+
+.login-brand-accent {
+  color: #60a5fa;
+}
+
+.login-brand-subtitle {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+/* Card */
+.login-card {
+  border-radius: 0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25) !important;
+  background: #ffffff !important;
+}
+
+.login-card .ant-card-body {
+  padding: 36px 32px !important;
+}
+
+.login-card-header {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.login-card-title {
+  margin: 0 !important;
+  color: #0f172a !important;
+  font-weight: 800 !important;
+}
+
+.login-card-desc {
+  font-size: 13px;
+}
+
+/* Form Styles */
+.login-form .ant-form-item-label > label {
+  font-weight: 600;
+}
+
+.login-form .ant-input-affix-wrapper,
+.login-form .ant-input,
+.login-form .ant-input-password {
+  border-radius: 0 !important;
+}
+
+.login-input-icon {
+  color: #94a3b8;
+}
+
+/* Submit Button */
+.login-submit-btn {
+  margin-top: 8px !important;
+  border-radius: 0 !important;
+  font-weight: 700 !important;
+  height: 46px !important;
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+  box-shadow: none !important;
+}
+
+.login-submit-btn:hover {
+  background: #1d4ed8 !important;
+  border-color: #1d4ed8 !important;
+}
+
+/* Footer Link */
+.login-footer {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.login-footer-link {
+  font-weight: 700;
+  color: #2563eb;
+}

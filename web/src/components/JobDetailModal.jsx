@@ -5,20 +5,15 @@ import {
   Tag,
   Typography,
   Button,
-  Space,
   Divider,
   Row,
   Col,
-  Descriptions,
   message
 } from 'antd';
 import {
   EnvironmentOutlined,
-  DollarOutlined,
-  ClockCircleOutlined,
   GlobalOutlined,
   PhoneOutlined,
-  UserOutlined,
   SendOutlined,
   HeartOutlined,
   HeartFilled,
@@ -29,12 +24,13 @@ import {
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import ApplyModal from './ApplyModal';
+import { isDeadlinePassed } from '../utils/jobDeadline';
 
-const { Title, Paragraph, Text } = Typography;
+const { Title } = Typography;
 
 export default function JobDetailModal({ visible, job: initialJob, onClose, onRefresh }) {
   const navigate = useNavigate();
-  const { isCandidate, user } = useAuth();
+  const { isCandidate } = useAuth();
   const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [job, setJob] = useState(initialJob);
   const [saved, setSaved] = useState(Boolean(initialJob?.is_saved));
@@ -189,7 +185,7 @@ export default function JobDetailModal({ visible, job: initialJob, onClose, onRe
             <div style={{ fontSize: 12, color: '#64748b' }}>Hạn nộp hồ sơ</div>
             <div style={{ fontWeight: 700, color: '#0f172a' }}>
               {job.deadline ? (
-                (job.status === 'closed' || new Date(job.deadline) < new Date(new Date().toDateString())) ? (
+                (job.status === 'closed' || isDeadlinePassed(job.deadline)) ? (
                   <Tag color="error" style={{ borderRadius: 4, fontWeight: 700, margin: 0 }}>
                     Đã hết hạn ({new Date(job.deadline).toLocaleDateString('vi-VN')})
                   </Tag>
@@ -233,7 +229,7 @@ export default function JobDetailModal({ visible, job: initialJob, onClose, onRe
               <Button type="primary" disabled style={{ background: '#059669', borderColor: '#059669' }}>
                 <CheckCircleFilled /> Đã ứng tuyển ({job.application_status})
               </Button>
-            ) : (job.status === 'closed' || (job.deadline && new Date(job.deadline) < new Date(new Date().toDateString()))) ? (
+            ) : (job.status === 'closed' || isDeadlinePassed(job.deadline)) ? (
               <Button disabled style={{ background: '#f1f5f9', color: '#94a3b8', borderColor: '#cbd5e1', fontWeight: 600 }}>
                 Đã hết hạn nộp hồ sơ
               </Button>

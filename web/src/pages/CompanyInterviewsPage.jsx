@@ -4,15 +4,11 @@ import {
   Table,
   Tag,
   Typography,
-  Button,
-  Space,
   Select,
   message,
   Avatar
 } from 'antd';
 import {
-  CalendarOutlined,
-  VideoCameraOutlined,
   UserOutlined
 } from '@ant-design/icons';
 import api from '../api/client';
@@ -24,11 +20,7 @@ export default function CompanyInterviewsPage() {
   const [interviews, setInterviews] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchInterviews();
-  }, []);
-
-  const fetchInterviews = async () => {
+  async function fetchInterviews() {
     setLoading(true);
     try {
       const res = await api.get('/interviews/company');
@@ -40,7 +32,11 @@ export default function CompanyInterviewsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    fetchInterviews();
+  }, []);
 
   const updateStatus = async (id, status) => {
     try {
@@ -50,14 +46,6 @@ export default function CompanyInterviewsPage() {
     } catch (err) {
       message.error(err.message);
     }
-  };
-
-  const statusConfig = {
-    scheduled: { color: 'blue', text: 'Chờ diễn ra' },
-    confirmed: { color: 'green', text: 'Ứng viên xác nhận' },
-    declined: { color: 'red', text: 'Ứng viên từ chối' },
-    cancelled: { color: 'default', text: 'Đã hủy' },
-    done: { color: 'purple', text: 'Đã hoàn thành' }
   };
 
   const columns = [

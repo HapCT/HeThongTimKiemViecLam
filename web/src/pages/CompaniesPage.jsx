@@ -15,10 +15,7 @@ import {
 import {
   SearchOutlined,
   EnvironmentOutlined,
-  BankOutlined,
-  ArrowRightOutlined,
-  CheckCircleFilled,
-  TeamOutlined
+  ArrowRightOutlined
 } from '@ant-design/icons';
 import api from '../api/client';
 
@@ -30,11 +27,7 @@ export default function CompaniesPage() {
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState('');
 
-  useEffect(() => {
-    fetchCompanies();
-  }, [keyword]);
-
-  const fetchCompanies = async () => {
+  async function fetchCompanies() {
     setLoading(true);
     try {
       const res = await api.get(`/companies?keyword=${encodeURIComponent(keyword)}`);
@@ -45,7 +38,11 @@ export default function CompaniesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    fetchCompanies();
+  }, [keyword]);
 
   return (
     <div style={{ background: '#f8fafc', minHeight: '85vh', padding: '36px 0 60px' }}>

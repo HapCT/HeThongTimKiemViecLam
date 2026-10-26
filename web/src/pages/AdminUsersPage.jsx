@@ -67,7 +67,7 @@ export default function AdminUsersPage() {
           error: resJson?.desc || 'Không tìm thấy dữ liệu mã số thuế trên cổng Cục Thuế Quốc Gia'
         });
       }
-    } catch (e) {
+    } catch {
       setTaxData({
         success: false,
         inputTax: taxCode,
@@ -83,7 +83,7 @@ export default function AdminUsersPage() {
     fetchUsers();
   }, [roleFilter, keyword]);
 
-  const fetchUsers = async () => {
+  async function fetchUsers() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -99,7 +99,7 @@ export default function AdminUsersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const toggleUserStatus = async (user) => {
     const nextStatus = user.status === 'locked' ? 'active' : 'locked';

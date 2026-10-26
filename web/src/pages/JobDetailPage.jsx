@@ -11,15 +11,12 @@ import {
   Spin,
   Empty,
   Divider,
-  Space,
   message,
-  Tooltip,
-  Alert
+  Tooltip
 } from 'antd';
 import {
   EnvironmentOutlined,
   DollarOutlined,
-  ClockCircleOutlined,
   GlobalOutlined,
   PhoneOutlined,
   BankOutlined,
@@ -32,22 +29,21 @@ import {
   UsergroupAddOutlined,
   EyeOutlined,
   SafetyCertificateOutlined,
-  CheckCircleOutlined,
   CalendarOutlined,
-  AppstoreOutlined,
-  RightOutlined
+  AppstoreOutlined
 } from '@ant-design/icons';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import ApplyModal from '../components/ApplyModal';
 import JobCard from '../components/JobCard';
+import { isDeadlinePassed } from '../utils/jobDeadline';
 
-const { Title, Paragraph, Text } = Typography;
+const { Title, Paragraph } = Typography;
 
 export default function JobDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isCandidate, user } = useAuth();
+  const { isCandidate } = useAuth();
 
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -55,7 +51,6 @@ export default function JobDetailPage() {
   const [saving, setSaving] = useState(false);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [relatedJobs, setRelatedJobs] = useState([]);
-  const [loadingRelated, setLoadingRelated] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -64,7 +59,7 @@ export default function JobDetailPage() {
     }
   }, [id]);
 
-  const fetchJobDetail = async () => {
+  async function fetchJobDetail() {
     setLoading(true);
     try {
       const res = await api.get(`/jobs/${id}`);
@@ -83,10 +78,9 @@ export default function JobDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const fetchRelatedJobs = async (categoryId, currentJobId) => {
-    setLoadingRelated(true);
     try {
       const res = await api.get(`/jobs?category_id=${categoryId}&limit=4`);
       if (res?.data?.jobs) {
@@ -96,8 +90,6 @@ export default function JobDetailPage() {
       }
     } catch (err) {
       console.error('Fetch related jobs error:', err);
-    } finally {
-      setLoadingRelated(false);
     }
   };
 
@@ -138,7 +130,7 @@ export default function JobDetailPage() {
 
   const isExpired = job && (
     job.status === 'closed' ||
-    (job.deadline && new Date(job.deadline) < new Date(new Date().toDateString()))
+    isDeadlinePassed(job.deadline)
   );
 
   const jobTypeLabels = {

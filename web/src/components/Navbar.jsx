@@ -14,7 +14,6 @@ import {
   Modal,
   Form,
   Input,
-  Radio,
   message,
   Drawer
 } from 'antd';
@@ -23,7 +22,6 @@ import {
   UserOutlined,
   LogoutOutlined,
   CheckCircleOutlined,
-  ThunderboltFilled,
   PlusOutlined,
   FileTextOutlined,
   CalendarOutlined,
@@ -32,7 +30,6 @@ import {
   TeamOutlined,
   AuditOutlined,
   AppstoreOutlined,
-  BankOutlined,
   KeyOutlined,
   LockOutlined,
   MenuOutlined
@@ -112,14 +109,14 @@ export default function Navbar() {
     try {
       await api.patch(`/notifications/${id}/read`);
       fetchNotifications();
-    } catch (e) {}
+    } catch {}
   };
 
   const markAllRead = async () => {
     try {
       await api.patch('/notifications/read-all');
       fetchNotifications();
-    } catch (e) {}
+    } catch {}
   };
 
   const notificationContent = (

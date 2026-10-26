@@ -12,7 +12,7 @@ import {
   message,
   Tag
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, AppstoreOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import api from '../api/client';
 
 const { Title, Text } = Typography;
@@ -29,7 +29,7 @@ export default function AdminCategoriesPage() {
     fetchCategories();
   }, []);
 
-  const fetchCategories = async () => {
+  async function fetchCategories() {
     setLoading(true);
     try {
       const res = await api.get('/categories');
@@ -41,7 +41,7 @@ export default function AdminCategoriesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const openCreateModal = () => {
     setEditingCategory(null);

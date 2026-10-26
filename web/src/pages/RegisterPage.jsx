@@ -75,7 +75,7 @@ export default function RegisterPage() {
         });
         message.error('Mã số thuế không tồn tại trên hệ thống Thuế Việt Nam!');
       }
-    } catch (err) {
+    } catch {
       message.error('Không thể kết nối đến máy chủ Cổng Thuế');
     } finally {
       setTaxChecking(false);

@@ -13,7 +13,7 @@ export function parseCVData(cv, extraInfo = {}) {
     } else {
       try {
         content = JSON.parse(rawContent);
-      } catch (e) {
+      } catch {
         content = {};
       }
     }

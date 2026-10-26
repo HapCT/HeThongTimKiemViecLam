@@ -14,7 +14,6 @@ import {
   Select,
   InputNumber,
   DatePicker,
-  Switch,
   message,
   Space,
   Popconfirm,
@@ -25,18 +24,13 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  TeamOutlined,
-  EyeOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  StopOutlined,
-  SendOutlined
+  TeamOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
@@ -67,7 +61,7 @@ export default function CompanyDashboardPage() {
     }
   }, [searchParams]);
 
-  const fetchData = async () => {
+  async function fetchData() {
     setLoading(true);
     try {
       const [statsRes, jobsRes, catsRes] = await Promise.all([
@@ -84,7 +78,7 @@ export default function CompanyDashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const handleAddNewCategory = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
@@ -116,7 +110,7 @@ export default function CompanyDashboardPage() {
     }
   };
 
-  const openCreateModal = () => {
+  function openCreateModal() {
     setEditingJob(null);
     form.resetFields();
     form.setFieldsValue({
@@ -129,7 +123,7 @@ export default function CompanyDashboardPage() {
       status: 'approved'
     });
     setJobModalOpen(true);
-  };
+  }
 
   const openEditModal = (job) => {
     setEditingJob(job);

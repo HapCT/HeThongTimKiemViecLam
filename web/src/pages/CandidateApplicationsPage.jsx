@@ -8,15 +8,12 @@ import {
   Space,
   Modal,
   Alert,
-  Spin,
-  Badge,
   Descriptions,
   message
 } from 'antd';
 import {
   CalendarOutlined,
   EyeOutlined,
-  VideoCameraOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
@@ -24,18 +21,14 @@ import {
 } from '@ant-design/icons';
 import api from '../api/client';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 export default function CandidateApplicationsPage() {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedApp, setSelectedApp] = useState(null);
 
-  useEffect(() => {
-    fetchApplications();
-  }, []);
-
-  const fetchApplications = async () => {
+  async function fetchApplications() {
     setLoading(true);
     try {
       const res = await api.get('/applications/my-applications');
@@ -47,7 +40,11 @@ export default function CandidateApplicationsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    fetchApplications();
+  }, []);
 
   const handleUpdateInterviewStatus = async (interviewId, status) => {
     try {

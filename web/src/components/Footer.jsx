@@ -1,8 +1,8 @@
 import React from 'react';
-import { Typography, Row, Col, Space } from 'antd';
-import { BankOutlined, MailOutlined, PhoneOutlined, EnvironmentOutlined } from '@ant-design/icons';
+import { Typography, Row, Col } from 'antd';
+import { BankOutlined, EnvironmentOutlined } from '@ant-design/icons';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Paragraph } = Typography;
 
 export default function Footer() {
   return (

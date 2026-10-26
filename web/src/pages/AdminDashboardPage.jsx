@@ -21,7 +21,6 @@ import {
   ClockCircleOutlined,
   AuditOutlined,
   CalendarOutlined,
-  ArrowRightOutlined,
   FileExcelOutlined
 } from '@ant-design/icons';
 import api from '../api/client';
@@ -38,7 +37,7 @@ export default function AdminDashboardPage() {
     fetchStats();
   }, []);
 
-  const fetchStats = async () => {
+  async function fetchStats() {
     setLoading(true);
     setError(null);
     try {
@@ -54,7 +53,7 @@ export default function AdminDashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const summary = stats?.summary || {};
 
@@ -207,7 +206,7 @@ export default function AdminDashboardPage() {
         {/* 6 Metric Cards */}
         <Row gutter={[20, 20]} style={{ marginBottom: 28 }}>
           <Col xs={12} sm={8} lg={4}>
-            <Card style={{ borderRadius: 14, border: '1px solid #e2e8f0' }}>
+            <Card loading={loading} style={{ borderRadius: 14, border: '1px solid #e2e8f0' }}>
               <Statistic
                 title="Sinh viên"
                 value={summary.total_candidates || 0}
@@ -217,7 +216,7 @@ export default function AdminDashboardPage() {
             </Card>
           </Col>
           <Col xs={12} sm={8} lg={4}>
-            <Card style={{ borderRadius: 14, border: '1px solid #e2e8f0' }}>
+            <Card loading={loading} style={{ borderRadius: 14, border: '1px solid #e2e8f0' }}>
               <Statistic
                 title="Doanh nghiệp"
                 value={summary.total_companies || 0}
@@ -227,7 +226,7 @@ export default function AdminDashboardPage() {
             </Card>
           </Col>
           <Col xs={12} sm={8} lg={4}>
-            <Card style={{ borderRadius: 14, border: '1px solid #e2e8f0' }}>
+            <Card loading={loading} style={{ borderRadius: 14, border: '1px solid #e2e8f0' }}>
               <Statistic
                 title="Tổng việc làm"
                 value={summary.total_jobs || 0}
@@ -237,7 +236,7 @@ export default function AdminDashboardPage() {
             </Card>
           </Col>
           <Col xs={12} sm={8} lg={4}>
-            <Card style={{ borderRadius: 14, border: '1px solid #e2e8f0' }}>
+            <Card loading={loading} style={{ borderRadius: 14, border: '1px solid #e2e8f0' }}>
               <Statistic
                 title="Tin chờ duyệt"
                 value={summary.pending_jobs || 0}
@@ -247,7 +246,7 @@ export default function AdminDashboardPage() {
             </Card>
           </Col>
           <Col xs={12} sm={8} lg={4}>
-            <Card style={{ borderRadius: 14, border: '1px solid #e2e8f0' }}>
+            <Card loading={loading} style={{ borderRadius: 14, border: '1px solid #e2e8f0' }}>
               <Statistic
                 title="Lượt nộp đơn"
                 value={summary.total_applications || 0}
@@ -257,7 +256,7 @@ export default function AdminDashboardPage() {
             </Card>
           </Col>
           <Col xs={12} sm={8} lg={4}>
-            <Card style={{ borderRadius: 14, border: '1px solid #e2e8f0' }}>
+            <Card loading={loading} style={{ borderRadius: 14, border: '1px solid #e2e8f0' }}>
               <Statistic
                 title="Lịch phỏng vấn"
                 value={summary.total_interviews || 0}

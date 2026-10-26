@@ -8,28 +8,19 @@ import {
   Modal,
   Form,
   Input,
-  Select,
   Typography,
   Space,
   Popconfirm,
   message,
-  Divider,
   Alert,
-  Upload,
-  Checkbox
+  Checkbox,
+  Spin
 } from 'antd';
 import {
   FileTextOutlined,
   PlusOutlined,
-  CheckOutlined,
   DeleteOutlined,
   EyeOutlined,
-  StarFilled,
-  UserOutlined,
-  MailOutlined,
-  PhoneOutlined,
-  ProjectOutlined,
-  TrophyOutlined,
   DownloadOutlined,
   UploadOutlined,
   FilePdfOutlined,
@@ -182,7 +173,7 @@ export default function CandidateCVPage() {
     } else if (typeof cv.content === 'string') {
       try {
         content = JSON.parse(cv.content);
-      } catch (e) {
+      } catch {
         content = {};
       }
     }
@@ -282,7 +273,7 @@ export default function CandidateCVPage() {
     if (typeof cv.content === 'object') return cv.content;
     try {
       return JSON.parse(cv.content);
-    } catch (e) {
+    } catch {
       return {};
     }
   };
@@ -318,6 +309,12 @@ export default function CandidateCVPage() {
             </Button>
           </Space>
         </div>
+
+        {loading && (
+          <div style={{ textAlign: 'center', padding: 40 }}>
+            <Spin size="large" />
+          </div>
+        )}
 
         {/* CV Grid */}
         <Row gutter={[20, 20]}>

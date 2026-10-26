@@ -12,11 +12,7 @@ export default function CandidateSavedJobsPage() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchSavedJobs();
-  }, []);
-
-  const fetchSavedJobs = async () => {
+  async function fetchSavedJobs() {
     setLoading(true);
     try {
       const res = await api.get('/saved-jobs');
@@ -29,7 +25,11 @@ export default function CandidateSavedJobsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    fetchSavedJobs();
+  }, []);
 
   return (
     <div style={{ background: '#f8fafc', minHeight: '85vh', padding: '36px 0 60px' }}>

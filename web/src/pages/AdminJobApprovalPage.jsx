@@ -4,27 +4,23 @@ import {
   Table,
   Tag,
   Button,
-  Select,
   Typography,
   Space,
   Modal,
   Input,
   message,
-  Tabs,
-  Popconfirm
+  Tabs
 } from 'antd';
 import {
   CheckOutlined,
   CloseOutlined,
-  EyeOutlined,
-  AuditOutlined
+  EyeOutlined
 } from '@ant-design/icons';
 import api from '../api/client';
 import JobDetailModal from '../components/JobDetailModal';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
-const { Option } = Select;
 
 export default function AdminJobApprovalPage() {
   const [jobs, setJobs] = useState([]);
@@ -44,7 +40,7 @@ export default function AdminJobApprovalPage() {
     fetchJobs();
   }, [statusFilter]);
 
-  const fetchJobs = async () => {
+  async function fetchJobs() {
     setLoading(true);
     try {
       const res = await api.get(`/admin/jobs?status=${statusFilter}`);
@@ -56,7 +52,7 @@ export default function AdminJobApprovalPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const handleApprove = async (job) => {
     try {

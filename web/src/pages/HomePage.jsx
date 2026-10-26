@@ -9,21 +9,12 @@ import {
   Typography,
   Card,
   Spin,
-  Space,
   Tag,
   message
 } from 'antd';
 import {
   SearchOutlined,
-  EnvironmentOutlined,
-  AppstoreOutlined,
-  ThunderboltFilled,
-  RightOutlined,
-  FireOutlined,
-  SafetyCertificateOutlined,
-  TeamOutlined,
-  BankOutlined,
-  RiseOutlined
+  AppstoreOutlined
 } from '@ant-design/icons';
 import api from '../api/client';
 import JobCard from '../components/JobCard';
@@ -40,34 +31,30 @@ export default function HomePage() {
   const [featuredJobs, setFeaturedJobs] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState(null);
-  const [selectedJob, setSelectedJob] = useState(null);
 
-  useEffect(() => {
-    fetchInitialData();
-  }, []);
-
-  const fetchInitialData = async () => {
+  async function fetchInitialData() {
     setLoading(true);
     try {
-      const [catsRes, jobsRes, compsRes, statsRes] = await Promise.all([
+      const [catsRes, jobsRes, compsRes] = await Promise.all([
         api.get('/categories'),
         api.get('/jobs?limit=6'),
-        api.get('/companies'),
-        api.get('/stats/public')
+        api.get('/companies')
       ]);
 
       if (catsRes?.data) setCategories(catsRes.data);
       if (jobsRes?.data?.jobs) setFeaturedJobs(jobsRes.data.jobs);
       if (compsRes?.data) setCompanies(compsRes.data);
-      if (statsRes?.data) setStats(statsRes.data);
     } catch (err) {
       console.error(err);
       message.error(err.message || 'Không thể tải dữ liệu trang chủ, vui lòng thử lại');
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    fetchInitialData();
+  }, []);
 
   const handleSearch = () => {
     const params = new URLSearchParams();

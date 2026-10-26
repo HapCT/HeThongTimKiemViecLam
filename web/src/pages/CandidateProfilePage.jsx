@@ -20,18 +20,16 @@ import {
   UserOutlined,
   SaveOutlined,
   BankOutlined,
-  BookOutlined,
   TrophyOutlined,
   PhoneOutlined,
   EnvironmentOutlined,
-  CalendarOutlined,
   UploadOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/client';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 

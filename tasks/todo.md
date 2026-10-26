@@ -6,6 +6,41 @@ Dấu [x] dưới đây chỉ dành cho mục đã được đối chiếu trong
 
 ---
 
+## ✅ Dọn file thừa và cảnh báo lint (đã làm ngày 26/10, chưa commit)
+Đã kiểm kê bằng cách dò xem file nào được import/tham chiếu ở đâu. Theo lựa chọn của bạn, giữ nguyên các bản backup `.docx` và `.vpp.bak_*` ở thư mục gốc.
+
+### Xoá file mẫu không dùng (xoá bằng `git rm`, khôi phục được từ commit trước)
+- [x] Mobile:
+  - `src/components/` (themed-text, themed-view, external-link, web-badge, ui/collapsible), `src/hooks/` (use-theme, use-color-scheme, use-color-scheme.web), `src/constants/theme.ts`, `src/global.css`.
+  - Ảnh mẫu: react-logo*, expo-logo, logo-glow, tutorial-web, expo-badge*, tabIcons/*.
+  - `LICENSE` của template Expo.
+  - Giữ: ảnh mà `app.json` dùng, `assets/expo.icon`, `AGENTS.md`, `.claude/`, `.vscode/`.
+- [x] Web: `src/App.css` (và dòng import trong `main.jsx`), `src/assets/hero.png`, `react.svg`, `vite.svg`, `public/icons.svg`; viết lại `web/README.md`.
+- [x] Backend: xoá 2 thư mục rỗng `models/`, `utils/`.
+
+### Sửa cảnh báo lint của web
+- [x] 120 `no-unused-vars` → 0: xoá import, biến, state và tham số không dùng; `catch (e)` không dùng thành `catch`.
+  - Trang chủ bỏ lời gọi `/stats/public` vì không hiển thị số liệu nào.
+  - Ba state "đang tải" trước đây không được dùng nay được nối vào giao diện: `ApplyModal` hiện Spin thay vì báo "chưa có CV" trong lúc tải, `CandidateCVPage` hiện Spin, `AdminDashboardPage` cho các thẻ số liệu `loading`.
+- [x] 20 `immutability` → 0: hàm tải dữ liệu đổi sang `function`, `useEffect` dời xuống ngay sau hàm mà nó gọi.
+- [x] 5 `purity` → 0: gộp 5 chỗ so sánh hạn nộp lặp lại thành `utils/jobDeadline.js` (`isDeadlinePassed`). Sửa luôn một lỗi: `JobDetailModal` coi tin không có hạn nộp là đã hết hạn (vì `new Date(null)` là năm 1970).
+- [ ] Còn 28 cảnh báo, chưa đạt mục tiêu dưới 20:
+  - 15 `set-state-in-effect` và 12 `exhaustive-deps`: đều thuộc mẫu "gọi API trong useEffect khi mở trang". Sửa triệt để cần đổi cách tải dữ liệu (ví dụ dùng thư viện như TanStack Query), không phải sửa vặt. Để lại cho một đợt riêng.
+  - 1 `only-export-components` ở `AuthContext.jsx` (file export cả Provider lẫn hook `useAuth`): chỉ ảnh hưởng hot reload khi dev.
+
+**Kiểm chứng:**
+- [x] Web: `npm run build` được; lint 0 lỗi, 164 → 28 cảnh báo.
+- [x] Trên trình duyệt (DB kiểm tra riêng, đã xoá sau khi dùng): mở đủ 19 route của khách, sinh viên, công ty và admin, kể cả trang 404 và modal ứng tuyển; trang nào cũng hiện dữ liệu, không có lỗi console (chỉ còn cảnh báo "deprecated" của antd có từ trước).
+- [x] Mobile: `npx tsc --noEmit` không lỗi; `app.json` không trỏ tới ảnh đã xoá.
+- [x] Backend: `npm test` 40/40.
+
+### Review
+- Xoá file dựa trên việc dò tham chiếu thật, không đoán theo tên. Cụm file mẫu của mobile chỉ import lẫn nhau nên xoá cả cụm.
+- Sửa lint bằng script có soát lại diff: chỉ import và `catch` bị đổi, không đụng logic. Các chỗ còn lại sửa tay từng chỗ.
+- Chưa chạy app mobile trên Expo Go sau khi xoá file; mới kiểm bằng `tsc` và dò tham chiếu ảnh.
+
+---
+
 ## ✅ Ưu tiên 0: Bảy luồng chính bị hỏng sau đợt sửa (đã sửa ngày 26/10, chưa commit)
 Lý do test vẫn pass: các test chỉ thử ca bị từ chối, chưa có ca thành công nào cho các luồng này.
 

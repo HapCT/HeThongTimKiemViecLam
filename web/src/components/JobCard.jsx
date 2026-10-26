@@ -12,12 +12,13 @@ import {
 } from '@ant-design/icons';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { isDeadlinePassed } from '../utils/jobDeadline';
 
-const { Text, Title } = Typography;
+const { Title } = Typography;
 
-export default function JobCard({ job, onSelect, onApplySuccess }) {
+export default function JobCard({ job, onSelect }) {
   const navigate = useNavigate();
-  const { isCandidate, user } = useAuth();
+  const { isCandidate } = useAuth();
   const [saved, setSaved] = useState(Boolean(job.is_saved));
   const [saving, setSaving] = useState(false);
 
@@ -218,7 +219,7 @@ export default function JobCard({ job, onSelect, onApplySuccess }) {
                 <span>
                   <ClockCircleOutlined style={{ marginRight: 4 }} />
                   Hạn nộp: {new Date(job.deadline).toLocaleDateString('vi-VN')}
-                  {new Date(job.deadline) < new Date(new Date().toDateString()) && (
+                  {isDeadlinePassed(job.deadline) && (
                     <Tag color="error" style={{ marginLeft: 6, borderRadius: 4, fontSize: 11 }}>
                       Đã hết hạn
                     </Tag>
@@ -231,7 +232,7 @@ export default function JobCard({ job, onSelect, onApplySuccess }) {
               <Tag color="cyan" style={{ borderRadius: 6, fontWeight: 600 }}>
                 ĐÃ ỨNG TUYỂN ({job.application_status.toUpperCase()})
               </Tag>
-            ) : (job.status === 'closed' || (job.deadline && new Date(job.deadline) < new Date(new Date().toDateString()))) ? (
+            ) : (job.status === 'closed' || isDeadlinePassed(job.deadline)) ? (
               <Tag color="default" style={{ borderRadius: 6, fontWeight: 600 }}>
                 HẾT HẠN ỨNG TUYỂN
               </Tag>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Modal, Form, Select, Input, Button, message, Alert, Radio, Card } from 'antd';
-import { SendOutlined, FileTextOutlined, CheckCircleFilled } from '@ant-design/icons';
+import { Modal, Form, Input, Button, message, Alert, Radio, Card, Spin } from 'antd';
+import { SendOutlined, FileTextOutlined } from '@ant-design/icons';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
@@ -15,13 +15,7 @@ export default function ApplyModal({ visible, job, onClose, onSuccess }) {
   const [loadingCvs, setLoadingCvs] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (visible && isCandidate) {
-      fetchCVs();
-    }
-  }, [visible, isCandidate]);
-
-  const fetchCVs = async () => {
+  async function fetchCVs() {
     setLoadingCvs(true);
     try {
       const res = await api.get('/candidates/cvs');
@@ -39,7 +33,13 @@ export default function ApplyModal({ visible, job, onClose, onSuccess }) {
     } finally {
       setLoadingCvs(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    if (visible && isCandidate) {
+      fetchCVs();
+    }
+  }, [visible, isCandidate]);
 
   const handleFinish = async (values) => {
     if (!job?.id) return;
@@ -137,7 +137,9 @@ export default function ApplyModal({ visible, job, onClose, onSuccess }) {
             label="Chọn CV ứng tuyển"
             rules={[{ required: true, message: 'Vui lòng chọn CV để ứng tuyển' }]}
           >
-            {cvs.length === 0 ? (
+            {loadingCvs ? (
+              <Spin size="small" />
+            ) : cvs.length === 0 ? (
               <Alert
                 type="info"
                 message="Bạn chưa có CV nào"

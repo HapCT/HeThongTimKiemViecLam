@@ -14,21 +14,12 @@ import {
   Radio,
   message,
   Space,
-  Avatar,
-  Descriptions,
-  Divider,
-  Alert
+  Avatar
 } from 'antd';
 import {
   UserOutlined,
-  EyeOutlined,
   CalendarOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
   FileTextOutlined,
-  MailOutlined,
-  PhoneOutlined,
-  DownloadOutlined,
   FileExcelOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -37,7 +28,7 @@ import { downloadCVAsPDF } from '../utils/cvExporter';
 import { useAuth } from '../context/AuthContext';
 import { fetchProtectedCvBlobUrl, openProtectedCvInNewTab } from '../api/fileHelper';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
@@ -99,14 +90,14 @@ export default function CompanyApplicantsPage() {
     fetchApplicants();
   }, [selectedJobId, selectedStatus]);
 
-  const fetchJobs = async () => {
+  async function fetchJobs() {
     try {
       const res = await api.get('/jobs/company/my-jobs');
       if (res?.data) setJobs(res.data);
-    } catch (e) {}
-  };
+    } catch {}
+  }
 
-  const fetchApplicants = async () => {
+  async function fetchApplicants() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -122,7 +113,7 @@ export default function CompanyApplicantsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const openStatusModal = (record) => {
     setSelectedApp(record);
@@ -568,7 +559,7 @@ export default function CompanyApplicantsPage() {
                 let parsed = {};
                 try {
                   parsed = typeof viewingCv.cv_content === 'object' ? viewingCv.cv_content : JSON.parse(viewingCv.cv_content);
-                } catch (e) {}
+                } catch {}
 
                 return (
                   <div>

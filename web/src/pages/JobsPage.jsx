@@ -7,23 +7,16 @@ import {
   Select,
   Card,
   Radio,
-  Slider,
   Pagination,
   Spin,
   Empty,
   Typography,
   Button,
-  Tag,
-  Space,
   message
 } from 'antd';
 import {
   SearchOutlined,
-  FilterOutlined,
-  ReloadOutlined,
-  EnvironmentOutlined,
-  AppstoreOutlined,
-  DollarOutlined
+  FilterOutlined
 } from '@ant-design/icons';
 import api from '../api/client';
 import JobCard from '../components/JobCard';
@@ -46,26 +39,21 @@ export default function JobsPage() {
   const [categories, setCategories] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [selectedJob, setSelectedJob] = useState(null);
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  useEffect(() => {
-    fetchJobs();
-  }, [keyword, categoryId, location, jobType, salaryFilter, page]);
-
-  const fetchCategories = async () => {
+  async function fetchCategories() {
     try {
       const res = await api.get('/categories');
       if (res?.data) setCategories(res.data);
     } catch (e) {
       console.warn('Lỗi khi tải danh mục:', e.message);
     }
-  };
+  }
 
-  const fetchJobs = async () => {
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  async function fetchJobs() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -97,7 +85,11 @@ export default function JobsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    fetchJobs();
+  }, [keyword, categoryId, location, jobType, salaryFilter, page]);
 
   const handleResetFilters = () => {
     setKeyword('');

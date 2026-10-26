@@ -11,10 +11,8 @@ import {
   Spin,
   Empty,
   Divider,
-  Space,
   message,
   Tooltip,
-  Badge,
   Rate,
   List,
   Avatar,
@@ -26,16 +24,12 @@ import {
   EnvironmentOutlined,
   GlobalOutlined,
   PhoneOutlined,
-  BankOutlined,
   ShareAltOutlined,
   ArrowLeftOutlined,
   CheckCircleFilled,
   SafetyCertificateOutlined,
   TeamOutlined,
   AppstoreOutlined,
-  FileTextOutlined,
-  SendOutlined,
-  CompassOutlined,
   StarFilled,
   CommentOutlined
 } from '@ant-design/icons';
@@ -43,13 +37,13 @@ import api from '../api/client';
 import JobCard from '../components/JobCard';
 import { useAuth } from '../context/AuthContext';
 
-const { Title, Paragraph, Text } = Typography;
+const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 export default function CompanyDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isCandidate, user } = useAuth();
+  const { isCandidate } = useAuth();
 
   const [company, setCompany] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -68,7 +62,7 @@ export default function CompanyDetailPage() {
     }
   }, [id]);
 
-  const fetchCompanyDetail = async () => {
+  async function fetchCompanyDetail() {
     setLoading(true);
     try {
       const res = await api.get(`/companies/${id}`);
@@ -81,9 +75,9 @@ export default function CompanyDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const fetchReviews = async () => {
+  async function fetchReviews() {
     try {
       const res = await api.get(`/companies/${id}/reviews`);
       if (res?.data) {
@@ -92,7 +86,7 @@ export default function CompanyDetailPage() {
     } catch (err) {
       console.error('Fetch reviews error:', err);
     }
-  };
+  }
 
   const handleReviewSubmit = async (values) => {
     setReviewSubmitting(true);

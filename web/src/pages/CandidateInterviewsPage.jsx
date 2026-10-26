@@ -15,9 +15,6 @@ import {
 import {
   CalendarOutlined,
   VideoCameraOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  BankOutlined,
   EnvironmentOutlined
 } from '@ant-design/icons';
 import api from '../api/client';
@@ -28,11 +25,7 @@ export default function CandidateInterviewsPage() {
   const [interviews, setInterviews] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchInterviews();
-  }, []);
-
-  const fetchInterviews = async () => {
+  async function fetchInterviews() {
     setLoading(true);
     try {
       const res = await api.get('/interviews/candidate');
@@ -44,7 +37,11 @@ export default function CandidateInterviewsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    fetchInterviews();
+  }, []);
 
   const updateStatus = async (id, status) => {
     try {

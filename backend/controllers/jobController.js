@@ -8,7 +8,7 @@ exports.getJobs = async (req, res) => {
       category_id,
       location,
       job_type,
-      status = 'approved',
+      status: requestedStatus,
       min_salary,
       max_salary,
       page = 1,
@@ -16,21 +16,34 @@ exports.getJobs = async (req, res) => {
       company_id
     } = req.query;
 
-    // Tự động đóng các tin tuyển dụng đã quá hạn nộp hồ sơ
-    await pool.query("UPDATE jobs SET status = 'closed' WHERE status = 'approved' AND deadline IS NOT NULL AND deadline < CURDATE()");
-
-    const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    // Giới hạn trần limit tối đa 50 và trang tối thiểu là 1 để chống DoS
+    const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 50);
+    const safePage = Math.max(parseInt(page, 10) || 1, 1);
+    const offset = (safePage - 1) * safeLimit;
     const params = [];
     let whereClauses = ['j.is_deleted = 0'];
 
-    // Status filter
-    if (status !== 'all') {
-      whereClauses.push('j.status = ?');
-      params.push(status);
+    // Phân quyền lọc trạng thái (status):
+    // - Khách vãng lai và ứng viên: bắt buộc chỉ xem 'approved' (kể cả có gửi ?status=all hay ?status=pending)
+    // - Quản trị viên: xem được mọi status
+    // - Doanh nghiệp: nếu tìm đúng company_id của chính mình thì được xem status bất kỳ; tìm chung thị trường thì chỉ xem 'approved'
+    const role = req.user?.role;
+    let effectiveStatus = 'approved';
+    if (role === 'admin') {
+      effectiveStatus = requestedStatus || 'approved';
+    } else if (role === 'company' && company_id && parseInt(company_id, 10) === req.user.company_id) {
+      effectiveStatus = requestedStatus || 'all';
+    } else {
+      effectiveStatus = 'approved';
     }
 
-    // Ẩn các tin đã quá hạn nộp hồ sơ khi ứng viên tìm kiếm việc làm đang tuyển
-    if (status === 'approved') {
+    if (effectiveStatus !== 'all') {
+      whereClauses.push('j.status = ?');
+      params.push(effectiveStatus);
+    }
+
+    // Ẩn các tin đã quá hạn nộp hồ sơ khi tìm kiếm việc làm công khai đang tuyển
+    if (effectiveStatus === 'approved') {
       whereClauses.push('(j.deadline IS NULL OR j.deadline >= CURDATE())');
     }
 
@@ -99,7 +112,7 @@ exports.getJobs = async (req, res) => {
       LIMIT ? OFFSET ?
     `;
 
-    const queryParams = [candidateId, candidateId, ...params, parseInt(limit, 10), offset];
+    const queryParams = [candidateId, candidateId, ...params, safeLimit, offset];
     const [jobs] = await pool.query(dataSql, queryParams);
 
     return res.json({
@@ -108,9 +121,9 @@ exports.getJobs = async (req, res) => {
         jobs,
         pagination: {
           total,
-          page: parseInt(page, 10),
-          limit: parseInt(limit, 10),
-          totalPages: Math.ceil(total / parseInt(limit, 10))
+          page: safePage,
+          limit: safeLimit,
+          totalPages: Math.ceil(total / safeLimit)
         }
       }
     });
@@ -125,9 +138,6 @@ exports.getJobById = async (req, res) => {
   try {
     const { id } = req.params;
     const candidateId = req.user?.candidate_id || 0;
-
-    // Increment view count
-    await pool.query('UPDATE jobs SET view_count = view_count + 1 WHERE id = ?', [id]);
 
     const sql = `
       SELECT j.*,
@@ -150,7 +160,21 @@ exports.getJobById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Không tìm thấy tin tuyển dụng' });
     }
 
-    res.json({ success: true, data: rows[0] });
+    const job = rows[0];
+
+    // Nếu tin chưa được phê duyệt, chỉ Admin hoặc doanh nghiệp đăng tin mới được xem
+    if (job.status !== 'approved') {
+      const isOwner = req.user?.company_id && req.user.company_id === job.company_id;
+      const isAdmin = req.user?.role === 'admin';
+      if (!isOwner && !isAdmin) {
+        return res.status(404).json({ success: false, message: 'Không tìm thấy tin tuyển dụng hoặc tin chưa được công khai' });
+      }
+    }
+
+    // Increment view count khi người xem hợp lệ truy cập
+    await pool.query('UPDATE jobs SET view_count = view_count + 1 WHERE id = ?', [id]);
+
+    res.json({ success: true, data: job });
   } catch (error) {
     console.error('getJobById error:', error);
     res.status(500).json({ success: false, message: 'Lỗi server khi lấy chi tiết tin tuyển dụng' });
@@ -160,9 +184,13 @@ exports.getJobById = async (req, res) => {
 // POST /api/jobs (Create Job)
 exports.createJob = async (req, res) => {
   try {
-    const companyId = req.user.company_id;
+    let companyId = req.user.company_id;
+    if (req.user.role === 'admin') {
+      companyId = req.body.company_id || companyId;
+    }
+
     if (!companyId) {
-      return res.status(403).json({ success: false, message: 'Chỉ tài khoản doanh nghiệp mới được đăng tin tuyển dụng' });
+      return res.status(403).json({ success: false, message: 'Chỉ tài khoản doanh nghiệp hoặc quản trị viên có chỉ định doanh nghiệp mới được đăng tin' });
     }
 
     const {
@@ -209,12 +237,16 @@ exports.createJob = async (req, res) => {
       ]
     );
 
-    // Notify admin
-    await pool.query(
-      `INSERT INTO notifications (user_id, sender_id, title, body, type, ref_id)
-       VALUES (1, ?, 'Tin tuyển dụng mới được tạo', ?, 'job', ?)`,
-      [req.user.id, `Doanh nghiệp đã đăng tin "${title}"`, result.insertId]
-    );
+    // Notify admin nếu doanh nghiệp tự đăng tin mới
+    if (req.user.role !== 'admin') {
+      const [admins] = await pool.query("SELECT id FROM users WHERE role = 'admin' LIMIT 1");
+      const adminUserId = admins.length > 0 ? admins[0].id : 1;
+      await pool.query(
+        `INSERT INTO notifications (user_id, sender_id, title, body, type, ref_id)
+         VALUES (?, ?, 'Tin tuyển dụng mới được tạo', ?, 'job', ?)`,
+        [adminUserId, req.user.id, `Doanh nghiệp đã đăng tin "${title}"`, result.insertId]
+      );
+    }
 
     res.status(201).json({
       success: true,
@@ -244,7 +276,7 @@ exports.updateJob = async (req, res) => {
       salary_negotiable,
       quantity,
       deadline,
-      status
+      status: requestedStatus
     } = req.body;
 
     // Verify ownership
@@ -253,13 +285,42 @@ exports.updateJob = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Không tìm thấy việc làm' });
     }
 
-    if (req.user.role !== 'admin' && jobs[0].company_id !== req.user.company_id) {
+    const existingJob = jobs[0];
+
+    if (req.user.role !== 'admin' && existingJob.company_id !== req.user.company_id) {
       return res.status(403).json({ success: false, message: 'Bạn không có quyền chỉnh sửa tin này' });
+    }
+
+    // Xử lý trạng thái (status) & doanh nghiệp sở hữu (company_id):
+    // - Admin: được chỉ định trạng thái mới trong danh sách hợp lệ; nếu thay đổi company_id thì công ty phải tồn tại
+    // - Doanh nghiệp: nếu tin đang 'approved' mà sửa đổi thông tin thì tự động đưa về 'pending' để admin duyệt lại
+    let nextStatus = existingJob.status;
+    let targetCompanyId = existingJob.company_id;
+
+    if (req.user.role === 'admin') {
+      if (requestedStatus) {
+        if (!['pending', 'approved', 'rejected', 'closed'].includes(requestedStatus)) {
+          return res.status(400).json({ success: false, message: 'Trạng thái tin tuyển dụng không hợp lệ' });
+        }
+        nextStatus = requestedStatus;
+      }
+      if (req.body.company_id) {
+        const [comp] = await pool.query('SELECT id FROM companies WHERE id = ?', [req.body.company_id]);
+        if (comp.length === 0) {
+          return res.status(400).json({ success: false, message: 'Doanh nghiệp được chỉ định không tồn tại' });
+        }
+        targetCompanyId = req.body.company_id;
+      }
+    } else {
+      if (existingJob.status === 'approved') {
+        nextStatus = 'pending';
+      }
     }
 
     await pool.query(
       `UPDATE jobs
-       SET title = COALESCE(?, title),
+       SET company_id = ?,
+           title = COALESCE(?, title),
            category_id = COALESCE(?, category_id),
            description = COALESCE(?, description),
            requirements = COALESCE(?, requirements),
@@ -271,9 +332,10 @@ exports.updateJob = async (req, res) => {
            salary_negotiable = COALESCE(?, salary_negotiable),
            quantity = COALESCE(?, quantity),
            deadline = COALESCE(?, deadline),
-           status = COALESCE(?, status)
+           status = ?
        WHERE id = ?`,
       [
+        targetCompanyId,
         title,
         category_id,
         description,
@@ -286,12 +348,17 @@ exports.updateJob = async (req, res) => {
         salary_negotiable,
         quantity,
         deadline,
-        status,
+        nextStatus,
         id
       ]
     );
 
-    res.json({ success: true, message: 'Cập nhật tin tuyển dụng thành công' });
+    res.json({
+      success: true,
+      message: nextStatus === 'pending' && existingJob.status === 'approved'
+        ? 'Cập nhật tin tuyển dụng thành công. Tin đã chuyển về trạng thái chờ duyệt lại.'
+        : 'Cập nhật tin tuyển dụng thành công'
+    });
   } catch (error) {
     console.error('updateJob error:', error);
     res.status(500).json({ success: false, message: 'Lỗi server khi cập nhật tin tuyển dụng' });
@@ -327,12 +394,6 @@ exports.getMyCompanyJobs = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Chỉ dành cho tài khoản công ty' });
     }
 
-    // Tự động chuyển trạng thái tin hết hạn sang 'closed'
-    await pool.query(
-      "UPDATE jobs SET status = 'closed' WHERE company_id = ? AND status = 'approved' AND deadline IS NOT NULL AND deadline < CURDATE()",
-      [companyId]
-    );
-
     const sql = `
       SELECT j.*,
              cat.name AS category_name,
@@ -362,9 +423,24 @@ exports.updateJobStatus = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Trạng thái không hợp lệ' });
     }
 
-    const [jobs] = await pool.query('SELECT * FROM jobs WHERE id = ?', [id]);
+    const [jobs] = await pool.query('SELECT * FROM jobs WHERE id = ? AND is_deleted = 0', [id]);
     if (jobs.length === 0) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy việc làm' });
+    }
+
+    const job = jobs[0];
+
+    // Phân quyền cập nhật trạng thái:
+    // - Doanh nghiệp: chỉ được cập nhật tin của chính mình và chỉ được chuyển sang 'closed' hoặc 'pending'
+    // - Không được tự duyệt 'approved' hoặc 'rejected'
+    if (req.user.role !== 'admin') {
+      if (!req.user.company_id || job.company_id !== req.user.company_id) {
+        return res.status(403).json({ success: false, message: 'Bạn không có quyền thay đổi trạng thái tin tuyển dụng này' });
+      }
+
+      if (['approved', 'rejected'].includes(status)) {
+        return res.status(403).json({ success: false, message: 'Chỉ quản trị viên mới có quyền phê duyệt hoặc từ chối tin tuyển dụng' });
+      }
     }
 
     const reviewedBy = req.user.role === 'admin' ? req.user.id : null;

@@ -57,8 +57,8 @@ export default function JobDetailModal({ visible, job: initialJob, onClose, onRe
   }, [visible, initialJob?.id]);
 
   const handleClose = () => {
-    onClose && onClose();
-    onRefresh && onRefresh();
+    if (onClose) onClose();
+    if (onRefresh) onRefresh();
   };
 
   if (!job) return null;
@@ -83,7 +83,7 @@ export default function JobDetailModal({ visible, job: initialJob, onClose, onRe
       if (res?.data) {
         setSaved(res.data.is_saved);
         message.success(res.message);
-        onRefresh && onRefresh();
+        if (onRefresh) onRefresh();
       }
     } catch (err) {
       message.error(err.message);
@@ -328,7 +328,7 @@ export default function JobDetailModal({ visible, job: initialJob, onClose, onRe
         job={job}
         onClose={() => setApplyModalOpen(false)}
         onSuccess={() => {
-          onRefresh && onRefresh();
+          if (onRefresh) onRefresh();
           onClose();
         }}
       />

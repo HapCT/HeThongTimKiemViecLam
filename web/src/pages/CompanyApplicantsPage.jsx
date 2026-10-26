@@ -32,10 +32,10 @@ import {
   FileExcelOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import * as XLSX from 'xlsx';
 import api from '../api/client';
 import { downloadCVAsPDF } from '../utils/cvExporter';
 import { useAuth } from '../context/AuthContext';
+import { fetchProtectedCvBlobUrl, openProtectedCvInNewTab } from '../api/fileHelper';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -64,6 +64,35 @@ export default function CompanyApplicantsPage() {
   // CV View modal
   const [cvModalOpen, setCvModalOpen] = useState(false);
   const [viewingCv, setViewingCv] = useState(null);
+  const [cvBlobUrl, setCvBlobUrl] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    let blobUrl = null;
+    if (viewingCv?.cv_file_url) {
+      fetchProtectedCvBlobUrl(viewingCv.cv_file_url)
+        .then((url) => {
+          if (active) {
+            blobUrl = url;
+            setCvBlobUrl(url);
+          } else {
+            URL.revokeObjectURL(url);
+          }
+        })
+        .catch((err) => {
+          if (active) {
+            setCvBlobUrl(null);
+            message.error(err.message);
+          }
+        });
+    } else {
+      setCvBlobUrl(null);
+    }
+    return () => {
+      active = false;
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
+  }, [viewingCv]);
 
   useEffect(() => {
     fetchJobs();
@@ -242,7 +271,7 @@ export default function CompanyApplicantsPage() {
     }
   ];
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (applicants.length === 0) {
       message.warning('Không có dữ liệu ứng viên để xuất');
       return;
@@ -260,6 +289,8 @@ export default function CompanyApplicantsPage() {
       'Ngày nộp hồ sơ': new Date(a.applied_at).toLocaleDateString('vi-VN'),
       'Ghi chú': a.note || ''
     }));
+
+    const XLSX = await import('xlsx');
 
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
@@ -327,6 +358,7 @@ export default function CompanyApplicantsPage() {
             rowKey="id"
             loading={loading}
             pagination={{ pageSize: 8 }}
+            scroll={{ x: true }}
           />
         </Card>
       </div>
@@ -389,15 +421,15 @@ export default function CompanyApplicantsPage() {
               onChange={(e) => {
                 const isOff = e.target.value === 'offline';
                 if (isOff) {
-                  const companyAddress = user?.company_address || user?.address || 'Tòa nhà FPT Cầu Giấy, Phố Duy Tân, Dịch Vọng Hậu, Cầu Giấy, Hà Nội';
+                  const companyAddress = user?.company_address || user?.address || '';
                   interviewForm.setFieldsValue({ location: companyAddress });
                 } else {
-                  interviewForm.setFieldsValue({ location: 'https://meet.google.com/utehy-interview-' + Math.floor(1000 + Math.random() * 9000) });
+                  interviewForm.setFieldsValue({ location: '' });
                 }
               }}
             >
               <Radio value="offline">Trực tiếp tại trụ sở</Radio>
-              <Radio value="online">Trực tuyến (Google Meet)</Radio>
+              <Radio value="online">Trực tuyến (Google Meet / Zoom)</Radio>
             </Radio.Group>
           </Form.Item>
 
@@ -470,7 +502,7 @@ export default function CompanyApplicantsPage() {
             <Button
               key="open-pdf"
               type="primary"
-              onClick={() => window.open(viewingCv.cv_file_url, '_blank')}
+              onClick={() => openProtectedCvInNewTab(viewingCv.cv_file_url).catch((err) => message.error(err.message))}
               style={{ background: '#059669', borderColor: '#059669', fontWeight: 700, borderRadius: 8 }}
             >
               Mở tệp PDF gốc của ứng viên
@@ -524,7 +556,7 @@ export default function CompanyApplicantsPage() {
             {viewingCv.cv_file_url ? (
               <div style={{ marginTop: 14 }}>
                 <iframe
-                  src={viewingCv.cv_file_url}
+                  src={cvBlobUrl || ''}
                   title="PDF Preview"
                   width="100%"
                   height="500px"

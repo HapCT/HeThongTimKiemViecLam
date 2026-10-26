@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { pool } = require('../config/db');
 const { JWT_SECRET } = require('../middlewares/auth');
 
@@ -74,9 +75,7 @@ exports.login = async (req, res) => {
 
 // POST /api/auth/register
 exports.register = async (req, res) => {
-  const conn = await pool.getConnection();
   try {
-    await conn.beginTransaction();
     const {
       email,
       password,
@@ -91,11 +90,17 @@ exports.register = async (req, res) => {
       address
     } = req.body;
 
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'Vui lòng nhập email' });
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập email hợp lệ' });
     }
 
-    if (!password || password.length < 6) {
+    const trimmedEmail = email.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      return res.status(400).json({ success: false, message: 'Định dạng email không hợp lệ' });
+    }
+
+    if (!password || typeof password !== 'string' || password.length < 6) {
       return res.status(400).json({ success: false, message: 'Mật khẩu phải có ít nhất 6 ký tự' });
     }
 
@@ -103,47 +108,57 @@ exports.register = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Vai trò đăng ký không hợp lệ' });
     }
 
-    const [existing] = await conn.query('SELECT id FROM users WHERE email = ?', [email.trim()]);
+    // 1. Kiểm tra email đã đăng ký chưa TRƯỚC KHI mở transaction
+    const [existing] = await pool.query('SELECT id FROM users WHERE email = ?', [trimmedEmail]);
     if (existing.length > 0) {
       return res.status(400).json({ success: false, message: 'Email đã được đăng ký trong hệ thống' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const uid = 'uid_' + Date.now();
-    const [userResult] = await conn.query(
-      'INSERT INTO users (firebase_uid, email, password, role, status) VALUES (?, ?, ?, ?, "active")',
-      [uid, email.trim(), hashedPassword, role]
-    );
-    const userId = userResult.insertId;
+    const uid = 'uid_' + crypto.randomUUID();
 
-    if (role === 'candidate') {
-      await conn.query(
-        'INSERT INTO candidates (user_id, full_name, phone, university, major) VALUES (?, ?, ?, ?, ?)',
-        [userId, fullName || 'Sinh viên mới', phone || '', university || 'ĐH Sư phạm Kỹ thuật Hưng Yên', major || 'Công nghệ thông tin']
+    // 2. Mở transaction để tạo tài khoản người dùng và hồ sơ chi tiết
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      const [userResult] = await conn.query(
+        'INSERT INTO users (firebase_uid, email, password, role, status) VALUES (?, ?, ?, ?, "active")',
+        [uid, trimmedEmail, hashedPassword, role]
       );
-    } else if (role === 'company') {
-      await conn.query(
-        'INSERT INTO companies (user_id, name, phone, tax_code, website, address) VALUES (?, ?, ?, ?, ?, ?)',
-        [userId, companyName || 'Doanh nghiệp mới', phone || '', taxCode || '', website || '', address || '']
-      );
+      const userId = userResult.insertId;
+
+      if (role === 'candidate') {
+        await conn.query(
+          'INSERT INTO candidates (user_id, full_name, phone, university, major) VALUES (?, ?, ?, ?, ?)',
+          [userId, fullName || 'Sinh viên mới', phone || '', university || 'ĐH Sư phạm Kỹ thuật Hưng Yên', major || 'Công nghệ thông tin']
+        );
+      } else if (role === 'company') {
+        await conn.query(
+          'INSERT INTO companies (user_id, name, phone, tax_code, website, address) VALUES (?, ?, ?, ?, ?, ?)',
+          [userId, companyName || 'Doanh nghiệp mới', phone || '', taxCode || '', website || '', address || '']
+        );
+      }
+
+      await conn.commit();
+
+      const profile = await getUserFullProfile(userId);
+      const token = generateToken(profile);
+
+      return res.status(201).json({
+        success: true,
+        message: 'Đăng ký tài khoản thành công',
+        data: { token, user: profile }
+      });
+    } catch (txError) {
+      await conn.rollback();
+      throw txError;
+    } finally {
+      conn.release();
     }
-
-    await conn.commit();
-
-    const profile = await getUserFullProfile(userId);
-    const token = generateToken(profile);
-
-    res.status(201).json({
-      success: true,
-      message: 'Đăng ký tài khoản thành công',
-      data: { token, user: profile }
-    });
   } catch (error) {
-    await conn.rollback();
     console.error('Register error:', error);
     res.status(500).json({ success: false, message: 'Lỗi server khi đăng ký' });
-  } finally {
-    conn.release();
   }
 };
 

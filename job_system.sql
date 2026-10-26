@@ -12,6 +12,7 @@ CREATE TABLE users (
   id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   firebase_uid  VARCHAR(128) NOT NULL UNIQUE,
   email         VARCHAR(255) NOT NULL UNIQUE,
+  password      VARCHAR(255) NULL,
   role          ENUM('candidate','company','admin') NOT NULL,
   status        ENUM('active','locked','pending') NOT NULL DEFAULT 'active',
   created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -153,23 +154,8 @@ CREATE TABLE interviews (
   INDEX idx_sched (scheduled_at)
 ) ENGINE=InnoDB;
 
--- ---------- 10. THANH TOÁN ĐĂNG TIN ----------
-CREATE TABLE payments (
-  id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  company_id     INT UNSIGNED NOT NULL,
-  job_id         INT UNSIGNED NOT NULL,
-  amount         DECIMAL(12,0) NOT NULL,
-  method         VARCHAR(50),                   -- momo, vnpay, banking...
-  transaction_code VARCHAR(100) UNIQUE,
-  status         ENUM('pending','success','failed','refunded') NOT NULL DEFAULT 'pending',
-  paid_at        DATETIME NULL,
-  created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (company_id) REFERENCES companies(id),
-  FOREIGN KEY (job_id)     REFERENCES jobs(id)
-) ENGINE=InnoDB;
-
--- ---------- 11. THÔNG BÁO ----------
--- Lưu lịch sử thông báo trong MySQL; đẩy realtime/push qua Firebase FCM
+-- ---------- 10. THÔNG BÁO ----------
+-- Lưu lịch sử thông báo trong MySQL
 CREATE TABLE notifications (
   id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id     INT UNSIGNED NOT NULL,            -- người nhận
@@ -185,14 +171,18 @@ CREATE TABLE notifications (
   INDEX idx_user_read (user_id, is_read, created_at)
 ) ENGINE=InnoDB;
 
--- Token FCM theo từng thiết bị (web + mobile)
-CREATE TABLE device_tokens (
-  id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  user_id    INT UNSIGNED NOT NULL,
-  fcm_token  VARCHAR(500) NOT NULL UNIQUE,
-  platform   ENUM('web','android','ios') NOT NULL,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+-- ---------- 11. ĐÁNH GIÁ DOANH NGHIỆP ----------
+CREATE TABLE company_reviews (
+  id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  company_id   INT UNSIGNED NOT NULL,
+  candidate_id INT UNSIGNED NOT NULL,
+  rating       TINYINT UNSIGNED NOT NULL DEFAULT 5,
+  comment      TEXT NULL,
+  created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+  FOREIGN KEY (candidate_id) REFERENCES candidates(id) ON DELETE CASCADE,
+  UNIQUE KEY unique_company_candidate (company_id, candidate_id),
+  INDEX idx_comp_review (company_id)
 ) ENGINE=InnoDB;
 
 -- ---------- DỮ LIỆU MẪU ----------

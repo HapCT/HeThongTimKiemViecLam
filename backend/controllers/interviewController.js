@@ -14,7 +14,7 @@ exports.scheduleInterview = async (req, res) => {
     }
 
     const [apps] = await pool.query(
-      `SELECT a.*, j.title AS job_title, c.user_id AS candidate_user_id, c.full_name AS candidate_name, u.email AS candidate_email, comp.name AS company_name
+      `SELECT a.*, j.title AS job_title, j.company_id, c.user_id AS candidate_user_id, c.full_name AS candidate_name, u.email AS candidate_email, comp.name AS company_name
        FROM applications a
        JOIN jobs j ON a.job_id = j.id
        JOIN companies comp ON j.company_id = comp.id
@@ -29,6 +29,11 @@ exports.scheduleInterview = async (req, res) => {
     }
 
     const app = apps[0];
+
+    // Check ownership: only the company that owns the job (or admin) can schedule an interview
+    if (req.user.role !== 'admin' && app.company_id !== req.user.company_id) {
+      return res.status(403).json({ success: false, message: 'Bạn không có quyền đặt lịch phỏng vấn cho hồ sơ của doanh nghiệp khác' });
+    }
 
     const [result] = await pool.query(
       `INSERT INTO interviews (application_id, scheduled_at, format, location, note, status)
@@ -104,13 +109,28 @@ exports.getCandidateInterviews = async (req, res) => {
   }
 };
 
-// GET /api/interviews/company
+// GET /api/interviews/company (Company & Admin)
 exports.getCompanyInterviews = async (req, res) => {
   try {
-    const companyId = req.user.company_id;
-    if (!companyId) {
-      return res.status(403).json({ success: false, message: 'Chỉ doanh nghiệp mới có danh sách phỏng vấn' });
+    let whereClauses = [];
+    const params = [];
+
+    if (req.user.role === 'admin') {
+      const { company_id } = req.query;
+      if (company_id) {
+        whereClauses.push('j.company_id = ?');
+        params.push(company_id);
+      }
+    } else {
+      const companyId = req.user.company_id;
+      if (!companyId) {
+        return res.status(403).json({ success: false, message: 'Chỉ doanh nghiệp mới có danh sách phỏng vấn' });
+      }
+      whereClauses.push('j.company_id = ?');
+      params.push(companyId);
     }
+
+    const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
     const sql = `
       SELECT i.*,
@@ -123,11 +143,11 @@ exports.getCompanyInterviews = async (req, res) => {
       JOIN jobs j ON a.job_id = j.id
       JOIN candidates c ON a.candidate_id = c.id
       JOIN users u ON c.user_id = u.id
-      WHERE j.company_id = ?
+      ${whereSql}
       ORDER BY i.scheduled_at ASC
     `;
 
-    const [rows] = await pool.query(sql, [companyId]);
+    const [rows] = await pool.query(sql, params);
     res.json({ success: true, data: rows });
   } catch (error) {
     console.error('getCompanyInterviews error:', error);
@@ -143,6 +163,42 @@ exports.updateInterviewStatus = async (req, res) => {
 
     if (!['scheduled', 'confirmed', 'declined', 'cancelled', 'done'].includes(status)) {
       return res.status(400).json({ success: false, message: 'Trạng thái phỏng vấn không hợp lệ' });
+    }
+
+    const [interviews] = await pool.query(
+      `SELECT i.*, a.candidate_id, j.company_id
+       FROM interviews i
+       JOIN applications a ON i.application_id = a.id
+       JOIN jobs j ON a.job_id = j.id
+       WHERE i.id = ?`,
+      [id]
+    );
+
+    if (interviews.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy lịch phỏng vấn' });
+    }
+
+    const interview = interviews[0];
+    const userRole = req.user.role;
+
+    if (userRole === 'candidate') {
+      // Ứng viên chỉ xác nhận hoặc từ chối được lịch của chính mình
+      if (interview.candidate_id !== req.user.candidate_id) {
+        return res.status(403).json({ success: false, message: 'Bạn không có quyền thao tác trên lịch phỏng vấn của ứng viên khác' });
+      }
+      if (!['confirmed', 'declined'].includes(status)) {
+        return res.status(400).json({ success: false, message: 'Ứng viên chỉ có thể xác nhận (confirmed) hoặc từ chối (declined) lịch phỏng vấn' });
+      }
+    } else if (userRole === 'company') {
+      // Công ty chỉ đổi được lịch của công ty mình
+      if (interview.company_id !== req.user.company_id) {
+        return res.status(403).json({ success: false, message: 'Bạn không có quyền thao tác trên lịch phỏng vấn của doanh nghiệp khác' });
+      }
+      if (!['scheduled', 'cancelled', 'done'].includes(status)) {
+        return res.status(400).json({ success: false, message: 'Doanh nghiệp chỉ có thể chuyển trạng thái sang scheduled, cancelled hoặc done' });
+      }
+    } else if (userRole !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Không có quyền thực hiện chức năng này' });
     }
 
     await pool.query(

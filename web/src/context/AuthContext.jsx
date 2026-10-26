@@ -99,6 +99,19 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const refreshUser = async () => {
+    try {
+      const res = await api.get('/auth/me');
+      if (res?.data) {
+        setUser(res.data);
+        localStorage.setItem('user', JSON.stringify(res.data));
+        return res.data;
+      }
+    } catch (e) {
+      console.warn('Lỗi khi làm mới thông tin user:', e.message);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -108,6 +121,7 @@ export const AuthProvider = ({ children }) => {
         register,
         logout,
         updateProfile,
+        refreshUser,
         isAuthenticated: !!user,
         isCandidate: user?.role === 'candidate',
         isCompany: user?.role === 'company',

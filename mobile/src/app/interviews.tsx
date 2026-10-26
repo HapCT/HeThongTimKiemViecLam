@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
-import { getMyInterviews, confirmInterview } from '../services/api';
+import { getMyInterviews, confirmInterview, declineInterview } from '../services/api';
 
 export default function InterviewsScreen() {
   const { user } = useAuth();
@@ -67,8 +67,48 @@ export default function InterviewsScreen() {
     }
   };
 
+  const handleDecline = (id: number) => {
+    Alert.alert(
+      'Từ chối lịch phỏng vấn',
+      'Bạn có chắc chắn muốn từ chối buổi phỏng vấn này?',
+      [
+        { text: 'Quay lại', style: 'cancel' },
+        {
+          text: 'Từ chối',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await declineInterview(id);
+              Alert.alert('Thành công', 'Đã từ chối lịch hẹn phỏng vấn.');
+              loadData();
+            } catch (err: any) {
+              Alert.alert('Lỗi', err.message || 'Không thể từ chối lịch phỏng vấn');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'confirmed':
+        return { label: '✓ Đã xác nhận', bg: '#dcfce7', color: '#15803d' };
+      case 'declined':
+        return { label: '✕ Đã từ chối', bg: '#fee2e2', color: '#b91c1c' };
+      case 'cancelled':
+        return { label: '⊘ Đã hủy bỏ', bg: '#f1f5f9', color: '#64748b' };
+      case 'done':
+        return { label: '⭐ Đã hoàn thành', bg: '#f3e8ff', color: '#7e22ce' };
+      case 'scheduled':
+      default:
+        return { label: '⏳ Chờ xác nhận', bg: '#eff6ff', color: '#2563eb' };
+    }
+  };
+
   const renderInterviewCard = ({ item }: { item: any }) => {
     const isOnline = item.format === 'online' || (item.location && item.location.includes('http'));
+    const statusMeta = getStatusBadge(item.status);
 
     return (
       <View style={styles.card}>
@@ -77,21 +117,9 @@ export default function InterviewsScreen() {
             <Text style={styles.companyName}>{item.company_name}</Text>
             <Text style={styles.jobTitle}>{item.job_title}</Text>
           </View>
-          <View
-            style={[
-              styles.statusBadge,
-              item.status === 'confirmed'
-                ? { backgroundColor: '#dcfce7' }
-                : { backgroundColor: '#eff6ff' },
-            ]}
-          >
-            <Text
-              style={[
-                styles.statusBadgeText,
-                item.status === 'confirmed' ? { color: '#15803d' } : { color: '#2563eb' },
-              ]}
-            >
-              {item.status === 'confirmed' ? '✓ Đã xác nhận' : '⏳ Chờ diễn ra'}
+          <View style={[styles.statusBadge, { backgroundColor: statusMeta.bg }]}>
+            <Text style={[styles.statusBadgeText, { color: statusMeta.color }]}>
+              {statusMeta.label}
             </Text>
           </View>
         </View>
@@ -126,17 +154,26 @@ export default function InterviewsScreen() {
               style={styles.meetBtn}
               onPress={() => handleJoinMeeting(item.location)}
             >
-              <Text style={styles.meetBtnText}>Vào phòng Google Meet 📹</Text>
+              <Text style={styles.meetBtnText}>Vào Google Meet 📹</Text>
             </TouchableOpacity>
           )}
 
           {item.status === 'scheduled' && (
-            <TouchableOpacity
-              style={styles.confirmBtn}
-              onPress={() => handleConfirm(item.id)}
-            >
-              <Text style={styles.confirmBtnText}>Xác nhận tham gia</Text>
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                style={styles.declineBtn}
+                onPress={() => handleDecline(item.id)}
+              >
+                <Text style={styles.declineBtnText}>Từ chối</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.confirmBtn}
+                onPress={() => handleConfirm(item.id)}
+              >
+                <Text style={styles.confirmBtnText}>Xác nhận tham gia</Text>
+              </TouchableOpacity>
+            </>
           )}
         </View>
       </View>
@@ -317,6 +354,20 @@ const styles = StyleSheet.create({
   },
   confirmBtnText: {
     color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  declineBtn: {
+    backgroundColor: '#fee2e2',
+    borderWidth: 1,
+    borderColor: '#fca5a5',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  declineBtnText: {
+    color: '#b91c1c',
     fontSize: 13,
     fontWeight: '700',
   },

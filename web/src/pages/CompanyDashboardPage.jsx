@@ -384,6 +384,7 @@ export default function CompanyDashboardPage() {
             rowKey="id"
             loading={loading}
             pagination={{ pageSize: 8 }}
+            scroll={{ x: true }}
           />
         </Card>
       </div>

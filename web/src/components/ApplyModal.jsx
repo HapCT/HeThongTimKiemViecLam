@@ -52,7 +52,7 @@ export default function ApplyModal({ visible, job, onClose, onSuccess }) {
       });
       message.success(res.message || 'Nộp hồ sơ ứng tuyển thành công!');
       form.resetFields();
-      onSuccess && onSuccess();
+      if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
       message.error(err.message || 'Lỗi khi nộp hồ sơ');
@@ -128,7 +128,7 @@ export default function ApplyModal({ visible, job, onClose, onSuccess }) {
           layout="vertical"
           onFinish={handleFinish}
           initialValues={{
-            cover_letter: `Kính gửi Ban tuyển dụng ${job?.company_name},\nEm là ${user?.candidate_name || 'Phạm Huy Anh'}, sinh viên Trường Đại học Sư phạm Kỹ thuật Hưng Yên. Em rất quan tâm đến vị trí ${job?.title} và tin rằng các kỹ năng của mình sẽ đáp ứng tốt yêu cầu công việc. Rất mong có cơ hội trao đổi trực tiếp cùng Quý công ty.`
+            cover_letter: `Kính gửi Ban tuyển dụng ${job?.company_name || 'Quý Công ty'},\nEm là ${user?.candidate_name || user?.full_name || 'Ứng viên'}, sinh viên ${user?.university || 'chuyên ngành Công nghệ thông tin'}. Em rất quan tâm đến vị trí ${job?.title || 'thực tập'} và tin rằng các kỹ năng của mình sẽ đáp ứng tốt yêu cầu công việc. Rất mong có cơ hội trao đổi trực tiếp cùng Quý công ty.`
           }}
           style={{ marginTop: 16 }}
         >

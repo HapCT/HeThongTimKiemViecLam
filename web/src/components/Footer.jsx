@@ -30,9 +30,9 @@ export default function Footer() {
               Thông tin Đồ án
             </Title>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 14 }}>
-              <div>Sinh viên thực hiện: <strong style={{ color: '#ffffff' }}>Phạm Huy Anh</strong></div>
-              <div>Mã số sinh viên: <strong style={{ color: '#60a5fa' }}>12523003</strong></div>
-              <div>Mã lớp: <strong style={{ color: '#ffffff' }}>12523W.4</strong></div>
+              <div>Đơn vị đào tạo: <strong style={{ color: '#ffffff' }}>Khoa Công nghệ Thông tin</strong></div>
+              <div>Trường: <strong style={{ color: '#60a5fa' }}>ĐH Sư phạm Kỹ thuật Hưng Yên</strong></div>
+              <div>Hệ đào tạo: <strong style={{ color: '#ffffff' }}>Đại học chính quy</strong></div>
               <div>Giảng viên hướng dẫn: <strong style={{ color: '#34d399' }}>ThS. Nguyễn Hoàng Điệp</strong></div>
               <div>Năm thực hiện: <strong style={{ color: '#ffffff' }}>2026</strong></div>
             </div>
@@ -65,7 +65,7 @@ export default function Footer() {
             fontSize: 13
           }}
         >
-          <div>© 2026 JobUTEHY - Bản quyền thuộc về Phạm Huy Anh (12523003) - UTEHY.</div>
+          <div>© 2026 JobUTEHY - Cổng thông tin Tuyển dụng & Thực tập Sinh viên UTEHY.</div>
           <div style={{ color: '#64748b' }}>Đồ án tốt nghiệp / Đồ án chuyên ngành Kỹ thuật phần mềm</div>
         </div>
       </div>

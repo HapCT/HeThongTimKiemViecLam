@@ -1,56 +1,77 @@
-# Welcome to your Expo app 👋
+# 📱 UTEHY Job Portal - Ứng dụng Di động Tìm Việc & Thực Tập Sinh Viên
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Ứng dụng di động dành cho sinh viên Đại học Sư phạm Kỹ thuật Hưng Yên (UTEHY), hỗ trợ tìm kiếm cơ hội thực tập, việc làm CNTT & kỹ thuật, lưu tin yêu thích, nộp hồ sơ CV và quản lý lịch hẹn phỏng vấn doanh nghiệp trực tuyến.
 
-## Get started
+---
 
-1. Install dependencies
+## ✨ Tính Năng Nổi Bật
 
-   ```bash
-   npm install
-   ```
+1. **Khám Phá & Tìm Kiếm Việc Làm:**
+   - Tra cứu theo từ khóa, ngành nghề đào tạo, hình thức việc làm (Thực tập / Toàn thời gian).
+   - Bộ lọc địa điểm: Hà Nội, Hưng Yên, TP. Hồ Chí Minh, Đà Nẵng, Bắc Ninh, Hải Phòng,...
+   - Xem chi tiết thông tin công ty, mức lương, số lượng tuyển, mô tả công việc, yêu cầu và quyền lợi.
 
-2. Start the app
+2. **Lưu Việc Làm Yêu Thích:**
+   - Lưu hoặc bỏ lưu tin tuyển dụng tức thì ngay trên thẻ công việc hoặc trong màn hình chi tiết.
+   - Đồng bộ danh sách tin đã lưu với tài khoản ứng viên.
 
-   ```bash
-   npx expo start
-   ```
+3. **Ứng Tuyển Nhanh Chóng:**
+   - Sử dụng CV trực tuyến hoặc CV đã tải lên trên hệ thống Web.
+   - Đính kèm thư giới thiệu (Cover Letter) gửi trực tiếp tới nhà tuyển dụng.
 
-In the output, you'll find options to open the app in a
+4. **Quản Lý Lịch Hẹn Phỏng Vấn:**
+   - Cập nhật thời gian thực các trạng thái: Chờ xác nhận, Đã xác nhận, Đã từ chối, Đã hủy, Đã hoàn thành.
+   - Thao tác một chạm: Xác nhận tham gia hoặc Từ chối lịch phỏng vấn.
+   - Mở trực tiếp phòng họp trực tuyến Google Meet.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+5. **Hồ Sơ & Bảo Mật:**
+   - Quản lý thông tin ứng viên, xem danh sách CV và việc làm đã lưu.
+   - Bảo mật Access Token bằng **Expo SecureStore** (chuẩn mã hóa Keychain trên iOS và Keystore trên Android).
+   - Tự động đăng xuất và dọn sạch phiên làm việc khi token hết hạn hoặc lỗi xác thực (HTTP 401).
+   - Xử lý mạng linh hoạt với thời gian chờ (timeout) và thông báo lỗi tiếng Việt thân thiện.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+---
 
-## Get a fresh project
+## 🛠️ Công Nghệ Sử Dụng
 
-When you're ready, run:
+- **Framework:** React Native + Expo SDK 54 / Expo Router (file-based routing)
+- **Ngôn ngữ:** TypeScript
+- **Bảo mật:** `expo-secure-store`
+- **Giao diện:** React Native Components tối ưu UI/UX, hỗ trợ SafeArea và StatusBar
 
+---
+
+## 🚀 Hướng Dẫn Cài Đặt & Khởi Chạy
+
+### 1. Yêu cầu môi trường
+- Node.js >= 18.x
+- Ứng dụng **Expo Go** trên thiết bị di động (Android / iOS) hoặc máy ảo / Android Studio
+
+### 2. Cài đặt thư viện
 ```bash
-npm run reset-project
+cd mobile
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 3. Cấu hình địa chỉ máy chủ API
+Mở file `src/services/api.ts` và đảm bảo biến `API_BASE` trỏ đúng địa chỉ IP máy chủ của bạn (nếu chạy qua Expo Go trên điện thoại cùng mạng Wi-Fi):
+```typescript
+// Ví dụ khi chạy trên thiết bị thật cùng mạng Wi-Fi:
+export const API_BASE = 'http://192.168.1.100:5000/api';
 
-### Other setup steps
+// Mặc định cho máy ảo Android:
+// export const API_BASE = 'http://10.0.2.2:5000/api';
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+### 4. Khởi chạy ứng dụng
+```bash
+npx expo start
+```
+- Quét mã QR bằng ứng dụng **Expo Go** (trên Android) hoặc **Camera** (trên iOS).
+- Hoặc nhấn phím `a` để mở trên Android Emulator, `w` để mở trên Web.
 
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### 5. Kiểm tra mã nguồn (Type-check)
+```bash
+npx tsc --noEmit
+```
+Đảm bảo 0 lỗi kiểu dữ liệu trước khi đóng gói sản phẩm.

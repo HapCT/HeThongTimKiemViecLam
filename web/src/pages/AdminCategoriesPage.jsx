@@ -154,6 +154,7 @@ export default function AdminCategoriesPage() {
             rowKey="id"
             loading={loading}
             pagination={false}
+            scroll={{ x: true }}
           />
         </Card>
       </div>

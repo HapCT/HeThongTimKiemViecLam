@@ -15,7 +15,7 @@ import {
   Image,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import { getJobs, getCategories, applyJob, getMyCVs, toggleSaveJob, getJobById } from '../services/api';
+import { getJobs, getCategories, applyJob, getMyCVs, toggleSaveJob, getSavedJobs, getJobById } from '../services/api';
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -29,6 +29,8 @@ export default function HomeScreen() {
   const [keyword, setKeyword] = useState('');
   const [selectedCatId, setSelectedCatId] = useState<number | string>('');
   const [selectedType, setSelectedType] = useState<string>('');
+  const [selectedLocation, setSelectedLocation] = useState<string>('');
+  const [savedJobIds, setSavedJobIds] = useState<Set<number>>(new Set());
 
   // Job Detail Modal
   const [selectedJob, setSelectedJob] = useState<any | null>(null);
@@ -42,14 +44,38 @@ export default function HomeScreen() {
 
   useEffect(() => {
     loadCategories();
+  }, []);
+
+  useEffect(() => {
     loadJobs();
-  }, [selectedCatId, selectedType]);
+  }, [selectedCatId, selectedType, selectedLocation]);
+
+  useEffect(() => {
+    if (user) {
+      loadSavedJobs();
+    } else {
+      setSavedJobIds(new Set());
+    }
+  }, [user]);
+
+  const loadSavedJobs = async () => {
+    try {
+      const list = await getSavedJobs();
+      if (Array.isArray(list)) {
+        setSavedJobIds(new Set(list.map((j: any) => j.id)));
+      }
+    } catch (err) {
+      console.warn('Không thể tải việc làm đã lưu:', err);
+    }
+  };
 
   const loadCategories = async () => {
     try {
       const cats = await getCategories();
       setCategories(cats);
-    } catch (e) {}
+    } catch (err) {
+      console.warn('Không thể tải danh mục:', err);
+    }
   };
 
   const loadJobs = async () => {
@@ -59,6 +85,7 @@ export default function HomeScreen() {
         keyword: keyword.trim() || undefined,
         category_id: selectedCatId || undefined,
         job_type: selectedType || undefined,
+        location: selectedLocation || undefined,
       });
       setJobs(data);
     } catch (err: any) {
@@ -66,6 +93,31 @@ export default function HomeScreen() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const handleToggleSave = async (jobId: number) => {
+    if (!user) {
+      Alert.alert(
+        'Yêu cầu đăng nhập',
+        'Vui lòng đăng nhập tài khoản Ứng viên để lưu việc làm yêu thích.'
+      );
+      return;
+    }
+    try {
+      const res = await toggleSaveJob(jobId);
+      setSavedJobIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(jobId)) {
+          next.delete(jobId);
+        } else {
+          next.add(jobId);
+        }
+        return next;
+      });
+      Alert.alert('Thông báo', res?.message || 'Cập nhật việc làm đã lưu thành công');
+    } catch (err: any) {
+      Alert.alert('Lỗi', err.message || 'Không thể thao tác lưu việc làm');
     }
   };
 
@@ -135,50 +187,62 @@ export default function HomeScreen() {
     return 'Thỏa thuận';
   };
 
-  const renderJobCard = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      activeOpacity={0.8}
-      style={styles.card}
-      onPress={() => openDetail(item)}
-    >
-      <View style={styles.cardHeader}>
-        <View style={styles.companyAvatar}>
-          <Text style={styles.companyAvatarText}>
-            {item.company_name ? item.company_name.charAt(0).toUpperCase() : 'C'}
-          </Text>
+  const renderJobCard = ({ item }: { item: any }) => {
+    const isSaved = savedJobIds.has(item.id);
+    return (
+      <TouchableOpacity
+        activeOpacity={0.8}
+        style={styles.card}
+        onPress={() => openDetail(item)}
+      >
+        <View style={styles.cardHeader}>
+          <View style={styles.companyAvatar}>
+            <Text style={styles.companyAvatarText}>
+              {item.company_name ? item.company_name.charAt(0).toUpperCase() : 'C'}
+            </Text>
+          </View>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={styles.companyName} numberOfLines={1}>
+              {item.company_name}
+            </Text>
+            <Text style={styles.jobTitle} numberOfLines={2}>
+              {item.title}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => handleToggleSave(item.id)}
+            style={{ padding: 6 }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Text style={{ fontSize: 22, color: isSaved ? '#f59e0b' : '#cbd5e1' }}>
+              {isSaved ? '★' : '☆'}
+            </Text>
+          </TouchableOpacity>
         </View>
-        <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.companyName} numberOfLines={1}>
-            {item.company_name}
-          </Text>
-          <Text style={styles.jobTitle} numberOfLines={2}>
-            {item.title}
-          </Text>
-        </View>
-      </View>
 
-      <View style={styles.tagRow}>
-        <View style={styles.tagBadgeSalary}>
-          <Text style={styles.tagBadgeSalaryText}>
-            💰 {formatSalary(item.salary_min, item.salary_max, item.salary_negotiable)}
-          </Text>
+        <View style={styles.tagRow}>
+          <View style={styles.tagBadgeSalary}>
+            <Text style={styles.tagBadgeSalaryText}>
+              💰 {formatSalary(item.salary_min, item.salary_max, item.salary_negotiable)}
+            </Text>
+          </View>
+          <View style={styles.tagBadge}>
+            <Text style={styles.tagBadgeText}>📍 {item.location || 'Hà Nội'}</Text>
+          </View>
+          <View style={styles.tagBadgeType}>
+            <Text style={styles.tagBadgeTypeText}>
+              {item.job_type === 'internship' ? '🎓 Thực tập' : '💼 Toàn thời gian'}
+            </Text>
+          </View>
         </View>
-        <View style={styles.tagBadge}>
-          <Text style={styles.tagBadgeText}>📍 {item.location || 'Hà Nội'}</Text>
-        </View>
-        <View style={styles.tagBadgeType}>
-          <Text style={styles.tagBadgeTypeText}>
-            {item.job_type === 'internship' ? '🎓 Thực tập' : '💼 Toàn thời gian'}
-          </Text>
-        </View>
-      </View>
 
-      <View style={styles.cardFooter}>
-        <Text style={styles.categoryText}>📁 {item.category_name || 'CNTT'}</Text>
-        <Text style={styles.viewDetailText}>Xem chi tiết →</Text>
-      </View>
-    </TouchableOpacity>
-  );
+        <View style={styles.cardFooter}>
+          <Text style={styles.categoryText}>📁 {item.category_name || 'CNTT'}</Text>
+          <Text style={styles.viewDetailText}>Xem chi tiết →</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -251,7 +315,7 @@ export default function HomeScreen() {
       </View>
 
       {/* Job Type Chips */}
-      <View style={{ flexDirection: 'row', paddingHorizontal: 16, marginBottom: 10, gap: 8 }}>
+      <View style={{ flexDirection: 'row', paddingHorizontal: 16, marginBottom: 8, gap: 8 }}>
         <TouchableOpacity
           style={[styles.smallChip, selectedType === '' && styles.smallChipActive]}
           onPress={() => setSelectedType('')}
@@ -270,6 +334,42 @@ export default function HomeScreen() {
         >
           <Text style={[styles.smallChipText, selectedType === 'full_time' && styles.smallChipTextActive]}>💼 Toàn thời gian</Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Location Filter Chips */}
+      <View style={{ marginBottom: 12 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 6 }}>
+          {[
+            { label: '📍 Tất cả địa điểm', val: '' },
+            { label: 'Hà Nội', val: 'Hà Nội' },
+            { label: 'Hưng Yên', val: 'Hưng Yên' },
+            { label: 'Hồ Chí Minh', val: 'Hồ Chí Minh' },
+            { label: 'Đà Nẵng', val: 'Đà Nẵng' },
+            { label: 'Bắc Ninh', val: 'Bắc Ninh' },
+            { label: 'Hải Phòng', val: 'Hải Phòng' },
+          ].map((loc) => {
+            const isActive = selectedLocation === loc.val;
+            return (
+              <TouchableOpacity
+                key={loc.val}
+                style={[
+                  styles.smallChip,
+                  isActive && { backgroundColor: '#ffedd5', borderColor: '#fdba74', borderWidth: 1 },
+                ]}
+                onPress={() => setSelectedLocation(selectedLocation === loc.val ? '' : loc.val)}
+              >
+                <Text
+                  style={[
+                    styles.smallChipText,
+                    isActive && { color: '#c2410c', fontWeight: '700' },
+                  ]}
+                >
+                  {loc.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
 
       {/* Jobs List */}
@@ -365,8 +465,27 @@ export default function HomeScreen() {
               <View style={{ height: 30 }} />
             </ScrollView>
 
-            <View style={styles.modalFooter}>
-              <TouchableOpacity style={styles.applyBtn} onPress={openApply}>
+            <View style={[styles.modalFooter, { flexDirection: 'row', gap: 10 }]}>
+              {selectedJob && (
+                <TouchableOpacity
+                  style={{
+                    paddingHorizontal: 16,
+                    paddingVertical: 14,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: savedJobIds.has(selectedJob.id) ? '#f59e0b' : '#cbd5e1',
+                    backgroundColor: savedJobIds.has(selectedJob.id) ? '#fffbeb' : '#ffffff',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                  onPress={() => handleToggleSave(selectedJob.id)}
+                >
+                  <Text style={{ fontSize: 14, color: savedJobIds.has(selectedJob.id) ? '#d97706' : '#64748b', fontWeight: '700' }}>
+                    {savedJobIds.has(selectedJob.id) ? '★ Đã lưu' : '☆ Lưu tin'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={[styles.applyBtn, { flex: 1 }]} onPress={openApply}>
                 <Text style={styles.applyBtnText}>Ứng tuyển ngay 🚀</Text>
               </TouchableOpacity>
             </View>

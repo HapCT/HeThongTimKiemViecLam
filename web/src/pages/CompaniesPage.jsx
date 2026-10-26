@@ -9,7 +9,8 @@ import {
   Typography,
   Spin,
   Button,
-  Empty
+  Empty,
+  message
 } from 'antd';
 import {
   SearchOutlined,
@@ -40,6 +41,7 @@ export default function CompaniesPage() {
       if (res?.data) setCompanies(res.data);
     } catch (err) {
       console.error(err);
+      message.error(err.message || 'Không thể tải danh sách doanh nghiệp, vui lòng thử lại');
     } finally {
       setLoading(false);
     }

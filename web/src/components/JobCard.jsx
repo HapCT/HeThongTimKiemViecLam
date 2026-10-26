@@ -243,7 +243,7 @@ export default function JobCard({ job, onSelect, onApplySuccess }) {
                 style={{ padding: 0, fontWeight: 600, color: '#2563eb' }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  onSelect && onSelect(job, true); // true = open apply
+                  if (onSelect) onSelect(job, true); // true = open apply
                 }}
               >
                 Ứng tuyển ngay →

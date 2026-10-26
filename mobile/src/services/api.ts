@@ -1,26 +1,44 @@
+import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
-// Địa chỉ IP của máy tính để điện thoại kết nối qua mạng Wi-Fi
-export const API_BASE_URL = 'http://192.168.1.14:5000/api';
+// Tự động nhận diện địa chỉ IP của máy dev qua Expo hostUri, fallback về IP mạng
+const getDevHostIp = () => {
+  const hostUri = Constants.expoConfig?.hostUri;
+  if (hostUri) {
+    return hostUri.split(':')[0];
+  }
+  return '192.168.1.14';
+};
+
+export const API_BASE_URL = `http://${getDevHostIp()}:5000/api`;
 
 const TOKEN_KEY = 'utehy_student_token';
 const USER_KEY = 'utehy_student_user';
 
 export async function getToken(): Promise<string | null> {
   try {
-    return await AsyncStorage.getItem(TOKEN_KEY);
+    return await SecureStore.getItemAsync(TOKEN_KEY);
   } catch {
     return null;
   }
 }
 
 export async function saveAuth(token: string, user: any) {
-  await AsyncStorage.setItem(TOKEN_KEY, token);
+  try {
+    await SecureStore.setItemAsync(TOKEN_KEY, token);
+  } catch (e) {
+    console.warn('Lỗi khi lưu token bảo mật:', e);
+  }
   await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
 export async function clearAuth() {
-  await AsyncStorage.removeItem(TOKEN_KEY);
+  try {
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
+  } catch (e) {
+    console.warn('Lỗi khi xóa token bảo mật:', e);
+  }
   await AsyncStorage.removeItem(USER_KEY);
 }
 
@@ -44,12 +62,40 @@ async function request(endpoint: string, options: RequestInit = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  // Timeout 15 giây
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-  const data = await response.json();
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+  } catch (netErr: any) {
+    clearTimeout(timeoutId);
+    if (netErr.name === 'AbortError') {
+      throw new Error('Yêu cầu đã hết thời gian chờ kết nối (quá 15 giây). Vui lòng thử lại.');
+    }
+    throw new Error('Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng của bạn.');
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  // Nếu gặp 401 thì tự động đăng xuất
+  if (response.status === 401) {
+    await clearAuth();
+    throw new Error('Phiên đăng nhập đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.');
+  }
+
+  let data: any;
+  try {
+    data = await response.json();
+  } catch (jsonErr) {
+    throw new Error(`Phản hồi máy chủ không hợp lệ (HTTP ${response.status})`);
+  }
+
   if (!response.ok || data.success === false) {
     throw new Error(data.message || 'Có lỗi xảy ra khi kết nối máy chủ');
   }
@@ -173,16 +219,23 @@ export async function confirmInterview(id: number | string) {
   return res;
 }
 
+export async function declineInterview(id: number | string, note?: string) {
+  const res = await request(`/interviews/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'declined', note: note || null }),
+  });
+  return res;
+}
+
 // ==================== SAVED JOBS ====================
 export async function getSavedJobs() {
   const res = await request('/saved-jobs');
   return res.data || [];
 }
 
-export async function toggleSaveJob(jobId: number | string, isSaved: boolean) {
-  if (isSaved) {
-    return await request(`/saved-jobs/${jobId}`, { method: 'DELETE' });
-  } else {
-    return await request(`/saved-jobs/${jobId}`, { method: 'POST' });
-  }
+export async function toggleSaveJob(jobId: number | string) {
+  return await request('/saved-jobs/toggle', {
+    method: 'POST',
+    body: JSON.stringify({ job_id: jobId }),
+  });
 }

@@ -61,12 +61,6 @@ export default function RootLayout() {
             ),
           }}
         />
-        <Tabs.Screen
-          name="explore"
-          options={{
-            href: null, // Ẩn tab thừa
-          }}
-        />
       </Tabs>
     </AuthProvider>
   );

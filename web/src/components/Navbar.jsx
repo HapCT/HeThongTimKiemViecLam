@@ -15,7 +15,8 @@ import {
   Form,
   Input,
   Radio,
-  message
+  message,
+  Drawer
 } from 'antd';
 import {
   BellOutlined,
@@ -33,7 +34,8 @@ import {
   AppstoreOutlined,
   BankOutlined,
   KeyOutlined,
-  LockOutlined
+  LockOutlined,
+  MenuOutlined
 } from '@ant-design/icons';
 
 const { Text } = Typography;
@@ -45,6 +47,7 @@ export default function Navbar() {
 
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const getUserDisplayName = () => {
     if (!user) return '';
@@ -94,7 +97,9 @@ export default function Navbar() {
         setNotifications(res.data);
         setUnreadCount(res.data.filter(n => !n.is_read).length);
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Lỗi khi tải thông báo hệ thống:', e.message);
+    }
   };
 
   useEffect(() => {
@@ -295,7 +300,7 @@ export default function Navbar() {
         </Link>
 
         {/* Navigation Links with pill style and NO line wrapping */}
-        <nav className="nav-links-scroll">
+        <nav className="nav-links-scroll desktop-only">
           <Link to="/" className={`nav-link-item ${location.pathname === '/' ? 'active' : ''}`}>
             Trang chủ
           </Link>
@@ -495,8 +500,172 @@ export default function Navbar() {
               </Link>
             </div>
           )}
+
+          {/* Hamburger Menu for Mobile */}
+          <Button
+            className="mobile-only"
+            type="text"
+            icon={<MenuOutlined style={{ fontSize: 20, color: '#334155' }} />}
+            onClick={() => setDrawerOpen(true)}
+            style={{
+              width: 38,
+              height: 38,
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px solid #e2e8f0',
+              borderRadius: 8
+            }}
+          />
         </div>
       </div>
+
+      {/* Mobile Drawer Menu */}
+      <Drawer
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 18, fontWeight: 800, color: '#0f172a' }}>
+              Job<span style={{ color: '#2563eb' }}>UTEHY</span>
+            </span>
+          </div>
+        }
+        placement="right"
+        onClose={() => setDrawerOpen(false)}
+        open={drawerOpen}
+        width={280}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {user && (
+            <div style={{ paddingBottom: 16, borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Avatar
+                size={44}
+                src={user?.avatar_url || user?.logo_url}
+                icon={<UserOutlined />}
+                style={{
+                  background:
+                    user?.role === 'admin'
+                      ? '#ef4444'
+                      : user?.role === 'company'
+                      ? '#0d9488'
+                      : '#2563eb'
+                }}
+              />
+              <div style={{ overflow: 'hidden' }}>
+                <div style={{ fontWeight: 700, fontSize: 15, color: '#0f172a', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                  {getUserDisplayName()}
+                </div>
+                <Tag color={user?.role === 'admin' ? 'red' : user?.role === 'company' ? 'cyan' : 'blue'} style={{ marginTop: 4, borderRadius: 4 }}>
+                  {user?.role === 'candidate' ? 'SINH VIÊN' : user?.role === 'company' ? 'DOANH NGHIỆP' : 'QUẢN TRỊ'}
+                </Tag>
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <Link to="/" onClick={() => setDrawerOpen(false)} className={`nav-link-item ${location.pathname === '/' ? 'active' : ''}`}>
+              Trang chủ
+            </Link>
+            <Link to="/jobs" onClick={() => setDrawerOpen(false)} className={`nav-link-item ${location.pathname.startsWith('/jobs') ? 'active' : ''}`}>
+              Việc làm
+            </Link>
+            <Link to="/companies" onClick={() => setDrawerOpen(false)} className={`nav-link-item ${location.pathname.startsWith('/companies') ? 'active' : ''}`}>
+              Doanh nghiệp
+            </Link>
+
+            {isCandidate && (
+              <>
+                <div style={{ height: 1, background: '#f1f5f9', margin: '8px 0' }} />
+                <Link to="/candidate/profile" onClick={() => setDrawerOpen(false)} className={`nav-link-item ${location.pathname === '/candidate/profile' ? 'active' : ''}`}>
+                  Hồ sơ cá nhân
+                </Link>
+                <Link to="/candidate/cvs" onClick={() => setDrawerOpen(false)} className={`nav-link-item ${location.pathname === '/candidate/cvs' ? 'active' : ''}`}>
+                  CV của tôi
+                </Link>
+                <Link to="/candidate/applications" onClick={() => setDrawerOpen(false)} className={`nav-link-item ${location.pathname === '/candidate/applications' ? 'active' : ''}`}>
+                  Việc đã ứng tuyển
+                </Link>
+                <Link to="/candidate/saved" onClick={() => setDrawerOpen(false)} className={`nav-link-item ${location.pathname === '/candidate/saved' ? 'active' : ''}`}>
+                  Việc làm đã lưu
+                </Link>
+                <Link to="/candidate/interviews" onClick={() => setDrawerOpen(false)} className={`nav-link-item ${location.pathname === '/candidate/interviews' ? 'active' : ''}`}>
+                  Lịch phỏng vấn
+                </Link>
+              </>
+            )}
+
+            {isCompany && (
+              <>
+                <div style={{ height: 1, background: '#f1f5f9', margin: '8px 0' }} />
+                <Link to="/company/dashboard" onClick={() => setDrawerOpen(false)} className={`nav-link-item ${location.pathname === '/company/dashboard' ? 'active' : ''}`}>
+                  Bảng điều khiển
+                </Link>
+                <Link to="/company/applicants" onClick={() => setDrawerOpen(false)} className={`nav-link-item ${location.pathname === '/company/applicants' ? 'active' : ''}`}>
+                  Quản lý ứng viên
+                </Link>
+                <Link to="/company/interviews" onClick={() => setDrawerOpen(false)} className={`nav-link-item ${location.pathname === '/company/interviews' ? 'active' : ''}`}>
+                  Lịch phỏng vấn
+                </Link>
+              </>
+            )}
+
+            {isAdmin && (
+              <>
+                <div style={{ height: 1, background: '#f1f5f9', margin: '8px 0' }} />
+                <Link to="/admin/dashboard" onClick={() => setDrawerOpen(false)} className={`nav-link-item ${location.pathname === '/admin/dashboard' ? 'active' : ''}`}>
+                  Thống kê hệ thống
+                </Link>
+                <Link to="/admin/jobs" onClick={() => setDrawerOpen(false)} className={`nav-link-item ${location.pathname === '/admin/jobs' ? 'active' : ''}`}>
+                  Kiểm duyệt tin
+                </Link>
+                <Link to="/admin/categories" onClick={() => setDrawerOpen(false)} className={`nav-link-item ${location.pathname === '/admin/categories' ? 'active' : ''}`}>
+                  Quản lý ngành nghề
+                </Link>
+                <Link to="/admin/users" onClick={() => setDrawerOpen(false)} className={`nav-link-item ${location.pathname === '/admin/users' ? 'active' : ''}`}>
+                  Quản lý người dùng
+                </Link>
+              </>
+            )}
+          </div>
+
+          <div style={{ marginTop: 'auto', paddingTop: 16, borderTop: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {user ? (
+              <>
+                <Button
+                  icon={<KeyOutlined />}
+                  onClick={() => {
+                    setDrawerOpen(false);
+                    pwdForm.resetFields();
+                    setChangePasswordOpen(true);
+                  }}
+                  style={{ width: '100%', borderRadius: 8 }}
+                >
+                  Đổi mật khẩu
+                </Button>
+                <Button
+                  danger
+                  type="primary"
+                  icon={<LogoutOutlined />}
+                  onClick={() => {
+                    setDrawerOpen(false);
+                    logout();
+                  }}
+                  style={{ width: '100%', borderRadius: 8 }}
+                >
+                  Đăng xuất
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" onClick={() => setDrawerOpen(false)}>
+                  <Button style={{ width: '100%', borderRadius: 8 }}>Đăng nhập</Button>
+                </Link>
+                <Link to="/register" onClick={() => setDrawerOpen(false)}>
+                  <Button type="primary" style={{ width: '100%', borderRadius: 8, background: '#2563eb' }}>Đăng ký</Button>
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+      </Drawer>
 
       {/* Change Password Modal */}
       <Modal

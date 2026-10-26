@@ -127,8 +127,12 @@ export default function ProfileScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 16 }}>
-        {/* ================= NẾU CHƯA ĐĂNG NHẬP ================= */}
-        {!user ? (
+        {loading ? (
+          <View style={{ paddingVertical: 80, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color="#2563eb" />
+            <Text style={{ marginTop: 12, color: '#64748b', fontSize: 14 }}>Đang tải thông tin tài khoản...</Text>
+          </View>
+        ) : !user ? (
           <View style={styles.loginCard}>
             {/* Toggle Switcher */}
             <View style={{ flexDirection: 'row', backgroundColor: '#f1f5f9', borderRadius: 10, padding: 4, marginBottom: 16 }}>
@@ -230,7 +234,7 @@ export default function ProfileScreen() {
                 </Text>
               </View>
 
-              <Text style={styles.userName}>{user.full_name || 'Phạm Huy Anh'}</Text>
+              <Text style={styles.userName}>{user.full_name || 'Ứng viên UTEHY'}</Text>
               <Text style={styles.userRole}>🎓 Ứng viên UTEHY</Text>
 
               <View style={styles.divider} />

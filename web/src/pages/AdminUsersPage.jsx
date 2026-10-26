@@ -24,7 +24,6 @@ import {
   SearchOutlined,
   FileExcelOutlined
 } from '@ant-design/icons';
-import * as XLSX from 'xlsx';
 import api from '../api/client';
 
 const { Title, Text } = Typography;
@@ -263,7 +262,7 @@ export default function AdminUsersPage() {
     }
   ];
 
-  const handleExportUsers = () => {
+  const handleExportUsers = async () => {
     if (users.length === 0) {
       message.warning('Không có dữ liệu người dùng để xuất');
       return;
@@ -278,6 +277,8 @@ export default function AdminUsersPage() {
       'Trạng thái': u.status === 'active' ? 'Hoạt động' : 'Bị khóa',
       'Ngày tạo tài khoản': new Date(u.created_at).toLocaleDateString('vi-VN')
     }));
+
+    const XLSX = await import('xlsx');
 
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
@@ -337,6 +338,7 @@ export default function AdminUsersPage() {
             rowKey="id"
             loading={loading}
             pagination={{ pageSize: 10 }}
+            scroll={{ x: true }}
           />
         </Card>
 

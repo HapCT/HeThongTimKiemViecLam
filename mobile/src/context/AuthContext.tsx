@@ -33,8 +33,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           try {
             const fresh = await getMe();
             if (fresh) setUser(fresh);
-          } catch {
-            // keep stored if offline
+          } catch (err: any) {
+            if (err?.message?.includes('hết hạn') || err?.message?.includes('401') || err?.message?.includes('xác thực')) {
+              await clearAuth();
+              setUser(null);
+            }
           }
         }
       } catch (e) {
@@ -81,7 +84,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const fresh = await getMe();
       if (fresh) setUser(fresh);
-    } catch {}
+    } catch (err: any) {
+      console.warn('Lỗi làm mới thông tin ứng viên:', err?.message);
+    }
   };
 
   return (

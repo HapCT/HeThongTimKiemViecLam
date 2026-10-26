@@ -32,11 +32,13 @@ import {
   TrophyOutlined,
   DownloadOutlined,
   UploadOutlined,
-  FilePdfOutlined
+  FilePdfOutlined,
+  EditOutlined
 } from '@ant-design/icons';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { downloadCVAsPDF } from '../utils/cvExporter';
+import { fetchProtectedCvBlobUrl, openProtectedCvInNewTab } from '../api/fileHelper';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -46,20 +48,15 @@ export default function CandidateCVPage() {
   const [cvs, setCvs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingCV, setEditingCV] = useState(null);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [previewCV, setPreviewCV] = useState(null);
+  const [cvBlobUrl, setCvBlobUrl] = useState(null);
   const [form] = Form.useForm();
+  const [editForm] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
-  
-  // Upload CV states
-  const [uploadFile, setUploadFile] = useState(null);
-  const [uploadTitle, setUploadTitle] = useState('');
-  const [uploadIsDefault, setUploadIsDefault] = useState(false);
-  const [uploading, setUploading] = useState(false);
-
-  useEffect(() => {
-    fetchCVs();
-  }, []);
+  const [updating, setUpdating] = useState(false);
 
   const fetchCVs = async () => {
     setLoading(true);
@@ -70,10 +67,49 @@ export default function CandidateCVPage() {
       }
     } catch (err) {
       console.error(err);
+      message.error(err.message || 'Không thể tải danh sách CV, vui lòng thử lại');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchCVs();
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    let blobUrl = null;
+    if (previewCV?.file_url) {
+      fetchProtectedCvBlobUrl(previewCV.file_url)
+        .then((url) => {
+          if (active) {
+            blobUrl = url;
+            setCvBlobUrl(url);
+          } else {
+            URL.revokeObjectURL(url);
+          }
+        })
+        .catch((err) => {
+          if (active) {
+            setCvBlobUrl(null);
+            message.error(err.message);
+          }
+        });
+    } else {
+      setCvBlobUrl(null);
+    }
+    return () => {
+      active = false;
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
+  }, [previewCV]);
+  
+  // Upload CV states
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploadTitle, setUploadTitle] = useState('');
+  const [uploadIsDefault, setUploadIsDefault] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const handleSetDefault = async (cvId) => {
     try {
@@ -99,23 +135,23 @@ export default function CandidateCVPage() {
     setSubmitting(true);
     try {
       const cvContent = {
-        fullName: values.fullName || user?.candidate_name || 'Phạm Huy Anh',
+        fullName: values.fullName || user?.candidate_name || user?.full_name || 'Ứng viên',
         email: values.email || user?.email,
-        phone: values.phone || user?.phone || '0987654321',
+        phone: values.phone || user?.phone || '',
         objective: values.objective,
         education: [
           {
-            school: values.school || 'Đại học Sư phạm Kỹ thuật Hưng Yên',
-            major: values.major || 'Kỹ thuật phần mềm',
-            gpa: values.gpa || '3.65'
+            school: values.school || user?.university || 'Trường Đại học',
+            major: values.major || user?.major || '',
+            gpa: values.gpa || (user?.gpa ? String(user.gpa) : '')
           }
         ],
         skills: values.skills ? values.skills.split(',').map((s) => s.trim()) : [],
         projects: [
           {
-            name: values.projectName || 'Đồ án thực tế',
+            name: values.projectName || 'Dự án thực tế',
             role: 'Developer',
-            tech: values.projectTech || 'React, Node.js'
+            tech: values.projectTech || ''
           }
         ]
       };
@@ -135,6 +171,80 @@ export default function CandidateCVPage() {
       message.error(err.message);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const openEditModal = (cv) => {
+    setEditingCV(cv);
+    let content = {};
+    if (typeof cv.content === 'object' && cv.content !== null) {
+      content = cv.content;
+    } else if (typeof cv.content === 'string') {
+      try {
+        content = JSON.parse(cv.content);
+      } catch (e) {
+        content = {};
+      }
+    }
+
+    editForm.setFieldsValue({
+      title: cv.title,
+      fullName: content.fullName || user?.candidate_name || user?.full_name || '',
+      email: content.email || user?.email || '',
+      phone: content.phone || user?.phone || '',
+      objective: content.objective || '',
+      school: content.education?.[0]?.school || user?.university || '',
+      major: content.education?.[0]?.major || user?.major || '',
+      gpa: content.education?.[0]?.gpa || (user?.gpa ? String(user.gpa) : ''),
+      skills: Array.isArray(content.skills) ? content.skills.join(', ') : '',
+      projectName: content.projects?.[0]?.name || '',
+      projectTech: content.projects?.[0]?.tech || '',
+      is_default: Boolean(cv.is_default)
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleUpdateCV = async (values) => {
+    if (!editingCV) return;
+    setUpdating(true);
+    try {
+      const cvContent = {
+        fullName: values.fullName || user?.candidate_name || user?.full_name || 'Ứng viên',
+        email: values.email || user?.email,
+        phone: values.phone || user?.phone || '',
+        objective: values.objective,
+        education: [
+          {
+            school: values.school || user?.university || 'Trường Đại học',
+            major: values.major || user?.major || '',
+            gpa: values.gpa || ''
+          }
+        ],
+        skills: values.skills ? values.skills.split(',').map((s) => s.trim()) : [],
+        projects: [
+          {
+            name: values.projectName || 'Dự án thực tế',
+            role: 'Developer',
+            tech: values.projectTech || ''
+          }
+        ]
+      };
+
+      await api.put(`/candidates/cvs/${editingCV.id}`, {
+        title: values.title,
+        content: cvContent,
+        is_default: values.is_default ? 1 : 0
+      });
+
+      message.success('Cập nhật CV thành công!');
+      setEditModalOpen(false);
+      setEditingCV(null);
+      editForm.resetFields();
+      fetchCVs();
+    } catch (err) {
+      message.error(err.message || 'Lỗi khi cập nhật CV');
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -269,7 +379,14 @@ export default function CandidateCVPage() {
                     <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: 8, marginBottom: 18, border: '1px dashed #cbd5e1' }}>
                       <Text style={{ fontSize: 13, color: '#334155' }}>
                         📎 Tệp đính kèm:{' '}
-                        <a href={cv.file_url} target="_blank" rel="noreferrer" style={{ fontWeight: 600, color: '#2563eb' }}>
+                        <a
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            openProtectedCvInNewTab(cv.file_url).catch((err) => message.error(err.message));
+                          }}
+                          style={{ fontWeight: 600, color: '#2563eb' }}
+                        >
                           {cv.file_url ? cv.file_url.split('/').pop() : 'Xem file CV'}
                         </a>
                       </Text>
@@ -324,7 +441,7 @@ export default function CandidateCVPage() {
                           type="primary"
                           size="small"
                           icon={<DownloadOutlined />}
-                          onClick={() => window.open(cv.file_url, '_blank')}
+                          onClick={() => openProtectedCvInNewTab(cv.file_url).catch((err) => message.error(err.message))}
                           style={{
                             background: '#059669',
                             borderColor: '#059669',
@@ -354,6 +471,18 @@ export default function CandidateCVPage() {
                           }}
                         >
                           Tải về PDF
+                        </Button>
+                      )}
+
+                      {!isUploaded && (
+                        <Button
+                          type="default"
+                          size="small"
+                          icon={<EditOutlined />}
+                          onClick={() => openEditModal(cv)}
+                          style={{ borderColor: '#2563eb', color: '#2563eb' }}
+                        >
+                          Sửa
                         </Button>
                       )}
 
@@ -403,15 +532,15 @@ export default function CandidateCVPage() {
           layout="vertical"
           onFinish={handleCreateCV}
           initialValues={{
-            fullName: user?.candidate_name || 'Phạm Huy Anh',
+            fullName: user?.candidate_name || user?.full_name || '',
             email: user?.email,
-            phone: user?.phone || '0987654321',
-            school: 'Trường Đại học Sư phạm Kỹ thuật Hưng Yên (UTEHY)',
-            major: 'Kỹ thuật phần mềm',
-            gpa: '3.65',
+            phone: user?.phone || '',
+            school: user?.university || 'Trường Đại học Sư phạm Kỹ thuật Hưng Yên (UTEHY)',
+            major: user?.major || 'Công nghệ thông tin',
+            gpa: user?.gpa ? String(user.gpa) : '3.5',
             skills: 'JavaScript, TypeScript, React.js, Node.js, MySQL, Git',
-            projectName: 'Hệ thống tuyển dụng thực tập trực tuyến',
-            projectTech: 'React, React Native, Node.js, MySQL',
+            projectName: 'Dự án thực tập tốt nghiệp',
+            projectTech: 'React, Node.js, MySQL',
             is_default: true
           }}
           style={{ marginTop: 16 }}
@@ -421,7 +550,7 @@ export default function CandidateCVPage() {
             label="Tiêu đề CV"
             rules={[{ required: true, message: 'Vui lòng nhập tên CV' }]}
           >
-            <Input placeholder="VD: CV Lập trình viên Fullstack - Phạm Huy Anh" />
+            <Input placeholder="VD: CV Lập trình viên Fullstack Developer" />
           </Form.Item>
 
           <Row gutter={16}>
@@ -485,6 +614,105 @@ export default function CandidateCVPage() {
             <Button onClick={() => setCreateModalOpen(false)}>Hủy</Button>
             <Button type="primary" htmlType="submit" loading={submitting} style={{ background: '#2563eb' }}>
               Tạo CV ngay
+            </Button>
+          </div>
+        </Form>
+      </Modal>
+
+      {/* Edit CV Modal */}
+      <Modal
+        open={editModalOpen}
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <EditOutlined style={{ color: '#2563eb' }} />
+            <span>Chỉnh sửa CV trực tuyến</span>
+          </div>
+        }
+        onCancel={() => {
+          setEditModalOpen(false);
+          setEditingCV(null);
+        }}
+        footer={null}
+        width={680}
+      >
+        <Form
+          form={editForm}
+          layout="vertical"
+          onFinish={handleUpdateCV}
+          style={{ marginTop: 16 }}
+        >
+          <Form.Item
+            name="title"
+            label="Tiêu đề CV"
+            rules={[{ required: true, message: 'Vui lòng nhập tên CV' }]}
+          >
+            <Input placeholder="VD: CV Lập trình viên Fullstack Developer" />
+          </Form.Item>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="fullName" label="Họ tên hiển thị">
+                <Input placeholder="Họ và tên..." />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="phone" label="Số điện thoại">
+                <Input placeholder="Số điện thoại liên hệ..." />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item
+            name="objective"
+            label="Mục tiêu nghề nghiệp"
+            rules={[{ required: true, message: 'Vui lòng nhập mục tiêu' }]}
+          >
+            <TextArea rows={3} />
+          </Form.Item>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="school" label="Trường học">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="major" label="Chuyên ngành">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={4}>
+              <Form.Item name="gpa" label="GPA">
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item name="skills" label="Kỹ năng chuyên môn (cách nhau bởi dấu phẩy)">
+            <Input />
+          </Form.Item>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="projectName" label="Tên dự án nổi bật">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="projectTech" label="Công nghệ sử dụng">
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item name="is_default" valuePropName="checked">
+            <Checkbox>Đặt làm CV mặc định</Checkbox>
+          </Form.Item>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
+            <Button onClick={() => { setEditModalOpen(false); setEditingCV(null); }}>Hủy</Button>
+            <Button type="primary" htmlType="submit" loading={updating} style={{ background: '#2563eb' }}>
+              Lưu thay đổi
             </Button>
           </div>
         </Form>
@@ -558,7 +786,7 @@ export default function CandidateCVPage() {
               style={{ marginBottom: 16, textAlign: 'left', borderRadius: 8 }}
             />
             <iframe
-              src={previewCV.file_url}
+              src={cvBlobUrl || ''}
               title="Preview CV"
               width="100%"
               height="550px"
@@ -568,7 +796,7 @@ export default function CandidateCVPage() {
               <Button
                 type="primary"
                 icon={<DownloadOutlined />}
-                onClick={() => window.open(previewCV.file_url, '_blank')}
+                onClick={() => openProtectedCvInNewTab(previewCV.file_url).catch((err) => message.error(err.message))}
                 style={{ background: '#2563eb' }}
               >
                 Mở tệp PDF trong tab mới
@@ -696,7 +924,7 @@ export default function CandidateCVPage() {
           <div style={{ marginBottom: 16 }}>
             <Text strong>Tên / Tiêu đề hồ sơ CV:</Text>
             <Input
-              placeholder="Ví dụ: CV Frontend Developer - Phạm Huy Anh"
+              placeholder="Ví dụ: CV Frontend Developer"
               value={uploadTitle}
               onChange={(e) => setUploadTitle(e.target.value)}
               style={{ marginTop: 6 }}

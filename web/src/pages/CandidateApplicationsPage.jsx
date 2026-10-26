@@ -194,6 +194,7 @@ export default function CandidateApplicationsPage() {
             rowKey="id"
             loading={loading}
             pagination={{ pageSize: 8 }}
+            scroll={{ x: true }}
           />
         </Card>
       </div>

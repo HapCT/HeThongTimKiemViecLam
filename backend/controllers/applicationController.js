@@ -53,7 +53,7 @@ exports.applyJob = async (req, res) => {
       [
         job.company_user_id,
         req.user.id,
-        `Ứng viên ${req.user.candidate_name || 'Phạm Huy Anh'} vừa nộp hồ sơ vào tin "${job.title}"`,
+        `Ứng viên ${req.user.candidate_name || req.user.full_name || 'Ứng viên'} vừa nộp hồ sơ vào tin "${job.title}"`,
         result.insertId
       ]
     );
@@ -102,17 +102,27 @@ exports.getCandidateApplications = async (req, res) => {
   }
 };
 
-// GET /api/applications/company/all (For Company)
+// GET /api/applications/company/all (For Company & Admin)
 exports.getCompanyApplications = async (req, res) => {
   try {
-    const companyId = req.user.company_id;
-    if (!companyId) {
-      return res.status(403).json({ success: false, message: 'Chỉ doanh nghiệp mới được xem danh sách này' });
-    }
-
     const { job_id, status } = req.query;
-    let whereClauses = ['j.company_id = ?'];
-    const params = [companyId];
+    let whereClauses = [];
+    const params = [];
+
+    if (req.user.role === 'admin') {
+      const { company_id } = req.query;
+      if (company_id) {
+        whereClauses.push('j.company_id = ?');
+        params.push(company_id);
+      }
+    } else {
+      const companyId = req.user.company_id;
+      if (!companyId) {
+        return res.status(403).json({ success: false, message: 'Chỉ doanh nghiệp mới được xem danh sách này' });
+      }
+      whereClauses.push('j.company_id = ?');
+      params.push(companyId);
+    }
 
     if (job_id) {
       whereClauses.push('a.job_id = ?');
@@ -123,6 +133,8 @@ exports.getCompanyApplications = async (req, res) => {
       whereClauses.push('a.status = ?');
       params.push(status);
     }
+
+    const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
     const sql = `
       SELECT a.*,
@@ -138,7 +150,7 @@ exports.getCompanyApplications = async (req, res) => {
       JOIN users u ON c.user_id = u.id
       JOIN cvs cv ON a.cv_id = cv.id
       LEFT JOIN interviews i ON i.application_id = a.id
-      WHERE ${whereClauses.join(' AND ')}
+      ${whereSql}
       ORDER BY a.applied_at DESC
     `;
 
@@ -161,7 +173,7 @@ exports.updateApplicationStatus = async (req, res) => {
     }
 
     const [apps] = await pool.query(
-      `SELECT a.*, j.title AS job_title, c.user_id AS candidate_user_id, c.full_name AS candidate_name, u.email AS candidate_email, comp.name AS company_name
+      `SELECT a.*, j.title AS job_title, j.company_id, c.user_id AS candidate_user_id, c.full_name AS candidate_name, u.email AS candidate_email, comp.name AS company_name
        FROM applications a
        JOIN jobs j ON a.job_id = j.id
        JOIN companies comp ON j.company_id = comp.id
@@ -176,6 +188,11 @@ exports.updateApplicationStatus = async (req, res) => {
     }
 
     const app = apps[0];
+
+    // Check ownership: only the company that owns the job can update status (or admin)
+    if (req.user.role !== 'admin' && app.company_id !== req.user.company_id) {
+      return res.status(403).json({ success: false, message: 'Bạn không có quyền cập nhật hồ sơ ứng tuyển của doanh nghiệp khác' });
+    }
 
     await pool.query(
       `UPDATE applications

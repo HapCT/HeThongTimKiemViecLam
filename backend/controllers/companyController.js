@@ -112,14 +112,37 @@ exports.addCompanyReview = async (req, res) => {
     const { id } = req.params;
     const { rating = 5, comment } = req.body;
 
-    if (!comment || comment.trim().length < 5) {
-      return res.status(400).json({ success: false, message: 'Vui lòng nhập nhận xét ít nhất 5 ký tự' });
+    const numRating = Number(rating);
+    if (!Number.isInteger(numRating) || numRating < 1 || numRating > 5) {
+      return res.status(400).json({ success: false, message: 'Điểm đánh giá phải là số nguyên từ 1 đến 5 sao' });
+    }
+
+    if (!comment || typeof comment !== 'string' || comment.trim().length < 5) {
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập nhận xét bằng chữ ít nhất 5 ký tự' });
+    }
+
+    // Kiểm tra doanh nghiệp tồn tại
+    const [comp] = await pool.query('SELECT id FROM companies WHERE id = ?', [id]);
+    if (comp.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin doanh nghiệp' });
+    }
+
+    // Kiểm tra xem sinh viên đã đánh giá công ty này chưa (mỗi sinh viên chỉ đánh giá 1 lần)
+    const [existing] = await pool.query(
+      'SELECT id FROM company_reviews WHERE company_id = ? AND candidate_id = ?',
+      [id, candidateId]
+    );
+    if (existing.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Bạn đã đánh giá doanh nghiệp này rồi. Mỗi sinh viên chỉ gửi tối đa 1 đánh giá cho mỗi công ty.'
+      });
     }
 
     const [result] = await pool.query(
       `INSERT INTO company_reviews (company_id, candidate_id, rating, comment)
        VALUES (?, ?, ?, ?)`,
-      [id, candidateId, Math.min(5, Math.max(1, parseInt(rating, 10))), comment.trim()]
+      [id, candidateId, numRating, comment.trim()]
     );
 
     res.status(201).json({
@@ -128,7 +151,12 @@ exports.addCompanyReview = async (req, res) => {
       data: { id: result.insertId }
     });
   } catch (error) {
+    // Hai request gửi cùng lúc vẫn bị chặn bởi UNIQUE (company_id, candidate_id)
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ success: false, message: 'Bạn đã đánh giá doanh nghiệp này rồi.' });
+    }
     console.error('addCompanyReview error:', error);
     res.status(500).json({ success: false, message: 'Lỗi server khi gửi đánh giá' });
   }
 };
+

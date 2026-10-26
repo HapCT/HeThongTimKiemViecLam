@@ -14,7 +14,8 @@ import {
   Typography,
   Button,
   Tag,
-  Space
+  Space,
+  message
 } from 'antd';
 import {
   SearchOutlined,
@@ -59,7 +60,9 @@ export default function JobsPage() {
     try {
       const res = await api.get('/categories');
       if (res?.data) setCategories(res.data);
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Lỗi khi tải danh mục:', e.message);
+    }
   };
 
   const fetchJobs = async () => {
@@ -90,6 +93,7 @@ export default function JobsPage() {
       }
     } catch (err) {
       console.error(err);
+      message.error(err.message || 'Không thể tải danh sách việc làm, vui lòng thử lại');
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Row, Col, Spin, Empty, Button } from 'antd';
+import { Typography, Row, Col, Spin, Empty, Button, message } from 'antd';
 import { HeartFilled } from '@ant-design/icons';
 import api from '../api/client';
 import JobCard from '../components/JobCard';
@@ -25,6 +25,7 @@ export default function CandidateSavedJobsPage() {
       }
     } catch (err) {
       console.error(err);
+      message.error(err.message || 'Không thể tải danh sách việc làm đã lưu, vui lòng thử lại');
     } finally {
       setLoading(false);
     }

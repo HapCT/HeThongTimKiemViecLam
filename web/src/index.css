@@ -17,10 +17,10 @@
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.08);
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08);
-  --radius-sm: 0px;
-  --radius-md: 0px;
-  --radius-lg: 0px;
-  --radius-xl: 0px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
 }
 
 *,
@@ -29,7 +29,6 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  border-radius: 0 !important;
 }
 
 html, body {
@@ -103,26 +102,6 @@ a {
 .hover-lift:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-lg);
-}
-
-/* Quick demo switch bar */
-.demo-role-pill {
-  cursor: pointer;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  border: 1px solid transparent;
-}
-.demo-role-pill.active {
-  background: #ffffff;
-  color: #1e40af;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  border-color: #93c5fd;
-}
-.demo-role-pill:hover:not(.active) {
-  background: rgba(255, 255, 255, 0.2);
 }
 
 /* Navigation & Header Modern Design Tokens */
@@ -237,6 +216,31 @@ a {
   border-color: #dc2626;
   box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
   transform: translateY(-1px);
+}
+
+/* Responsive Helper Utilities */
+.mobile-only {
+  display: none !important;
+}
+
+.desktop-only {
+  display: flex !important;
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: flex !important;
+  }
+  .desktop-only {
+    display: none !important;
+  }
+  .header-container {
+    padding: 0 16px;
+    height: 60px;
+  }
+  .app-container {
+    padding: 0 16px;
+  }
 }
 
 

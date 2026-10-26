@@ -11,6 +11,7 @@ import {
   Progress,
   Button,
   Space,
+  Alert,
   message
 } from 'antd';
 import {
@@ -23,7 +24,6 @@ import {
   ArrowRightOutlined,
   FileExcelOutlined
 } from '@ant-design/icons';
-import * as XLSX from 'xlsx';
 import api from '../api/client';
 
 const { Title, Text } = Typography;
@@ -32,6 +32,7 @@ export default function AdminDashboardPage() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchStats();
@@ -39,6 +40,7 @@ export default function AdminDashboardPage() {
 
   const fetchStats = async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await api.get('/stats/admin');
       if (res?.data) {
@@ -46,6 +48,9 @@ export default function AdminDashboardPage() {
       }
     } catch (e) {
       console.error(e);
+      const errMsg = e.message || 'Không thể tải số liệu thống kê quản trị';
+      setError(errMsg);
+      message.error(errMsg);
     } finally {
       setLoading(false);
     }
@@ -111,38 +116,59 @@ export default function AdminDashboardPage() {
     }
   ];
 
-  const handleExportReport = () => {
+  const handleExportReport = async () => {
     if (!stats) return;
-    const wb = XLSX.utils.book_new();
+    try {
+      const XLSX = await import('xlsx');
+      const wb = XLSX.utils.book_new();
 
-    const summaryData = [
-      { 'Chỉ số thống kê': 'Tổng số sinh viên ứng viên', 'Số lượng': summary.total_candidates || 0 },
-      { 'Chỉ số thống kê': 'Tổng số doanh nghiệp đối tác', 'Số lượng': summary.total_companies || 0 },
-      { 'Chỉ số thống kê': 'Tổng số tin tuyển dụng', 'Số lượng': summary.total_jobs || 0 },
-      { 'Chỉ số thống kê': 'Tin tuyển dụng chờ kiểm duyệt', 'Số lượng': summary.pending_jobs || 0 },
-      { 'Chỉ số thống kê': 'Tổng lượt nộp hồ sơ ứng tuyển', 'Số lượng': summary.total_applications || 0 },
-      { 'Chỉ số thống kê': 'Tổng buổi hẹn phỏng vấn', 'Số lượng': summary.total_interviews || 0 },
-    ];
-    const ws1 = XLSX.utils.json_to_sheet(summaryData);
-    XLSX.utils.book_append_sheet(wb, ws1, 'TongQuan');
+      const summaryData = [
+        { 'Chỉ số thống kê': 'Tổng số sinh viên ứng viên', 'Số lượng': summary.total_candidates || 0 },
+        { 'Chỉ số thống kê': 'Tổng số doanh nghiệp đối tác', 'Số lượng': summary.total_companies || 0 },
+        { 'Chỉ số thống kê': 'Tổng số tin tuyển dụng', 'Số lượng': summary.total_jobs || 0 },
+        { 'Chỉ số thống kê': 'Tin tuyển dụng chờ kiểm duyệt', 'Số lượng': summary.pending_jobs || 0 },
+        { 'Chỉ số thống kê': 'Tổng lượt nộp hồ sơ ứng tuyển', 'Số lượng': summary.total_applications || 0 },
+        { 'Chỉ số thống kê': 'Tổng buổi hẹn phỏng vấn', 'Số lượng': summary.total_interviews || 0 },
+      ];
+      const ws1 = XLSX.utils.json_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, ws1, 'TongQuan');
 
-    if (stats.jobsByCategory && stats.jobsByCategory.length > 0) {
-      const catData = stats.jobsByCategory.map((c, i) => ({
-        'STT': i + 1,
-        'Lĩnh vực / Ngành nghề': c.category_name || 'Khác',
-        'Số lượng việc làm': c.job_count
-      }));
-      const ws2 = XLSX.utils.json_to_sheet(catData);
-      XLSX.utils.book_append_sheet(wb, ws2, 'ViecLamTheoNganh');
+      if (stats.jobsByCategory && stats.jobsByCategory.length > 0) {
+        const catData = stats.jobsByCategory.map((c, i) => ({
+          'STT': i + 1,
+          'Lĩnh vực / Ngành nghề': c.category_name || 'Khác',
+          'Số lượng việc làm': c.job_count
+        }));
+        const ws2 = XLSX.utils.json_to_sheet(catData);
+        XLSX.utils.book_append_sheet(wb, ws2, 'ViecLamTheoNganh');
+      }
+
+      XLSX.writeFile(wb, `Bao_cao_thong_ke_UTEHY_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      message.success('Xuất file Excel báo cáo thống kê thành công!');
+    } catch (err) {
+      console.error('Lỗi khi xuất file Excel:', err);
+      message.error('Không thể xuất báo cáo Excel, vui lòng thử lại');
     }
-
-    XLSX.writeFile(wb, `Bao_cao_thong_ke_UTEHY_${new Date().toISOString().slice(0, 10)}.xlsx`);
-    message.success('Xuất file Excel báo cáo thống kê thành công!');
   };
 
   return (
     <div style={{ background: '#f8fafc', minHeight: '85vh', padding: '36px 0 60px' }}>
       <div className="app-container">
+        {error && !stats && (
+          <Alert
+            message="Không thể tải dữ liệu thống kê quản trị"
+            description={error}
+            type="error"
+            showIcon
+            action={
+              <Button type="primary" size="small" onClick={fetchStats}>
+                Thử lại
+              </Button>
+            }
+            style={{ marginBottom: 24, borderRadius: 12 }}
+          />
+        )}
+
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28, flexWrap: 'wrap', gap: 16 }}>
           <div>
             <Title level={2} style={{ margin: 0, color: '#0f172a', fontWeight: 800 }}>
@@ -318,6 +344,7 @@ export default function AdminDashboardPage() {
                 rowKey="id"
                 pagination={false}
                 size="small"
+                scroll={{ x: true }}
               />
             </Card>
           </Col>
@@ -333,6 +360,7 @@ export default function AdminDashboardPage() {
                 rowKey="id"
                 pagination={false}
                 size="small"
+                scroll={{ x: true }}
               />
             </Card>
           </Col>

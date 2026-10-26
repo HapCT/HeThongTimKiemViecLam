@@ -10,7 +10,8 @@ import {
   Card,
   Spin,
   Space,
-  Tag
+  Tag,
+  message
 } from 'antd';
 import {
   SearchOutlined,
@@ -62,6 +63,7 @@ export default function HomePage() {
       if (statsRes?.data) setStats(statsRes.data);
     } catch (err) {
       console.error(err);
+      message.error(err.message || 'Không thể tải dữ liệu trang chủ, vui lòng thử lại');
     } finally {
       setLoading(false);
     }

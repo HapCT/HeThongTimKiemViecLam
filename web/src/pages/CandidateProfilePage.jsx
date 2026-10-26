@@ -13,7 +13,8 @@ import {
   Avatar,
   message,
   Tag,
-  Divider
+  Divider,
+  Upload
 } from 'antd';
 import {
   UserOutlined,
@@ -23,7 +24,8 @@ import {
   TrophyOutlined,
   PhoneOutlined,
   EnvironmentOutlined,
-  CalendarOutlined
+  CalendarOutlined,
+  UploadOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useAuth } from '../context/AuthContext';
@@ -34,9 +36,10 @@ const { TextArea } = Input;
 const { Option } = Select;
 
 export default function CandidateProfilePage() {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, refreshUser } = useAuth();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -99,26 +102,59 @@ export default function CandidateProfilePage() {
                 style={{
                   background: '#2563eb',
                   border: '4px solid #dbeafe',
-                  marginBottom: 16
+                  marginBottom: 12
                 }}
               />
+              <div style={{ marginBottom: 16 }}>
+                <Upload
+                  name="image"
+                  showUploadList={false}
+                  customRequest={async ({ file, onSuccess, onError }) => {
+                    setUploadingAvatar(true);
+                    try {
+                      const formData = new FormData();
+                      formData.append('image', file);
+                      await api.post('/candidates/upload-avatar', formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                      });
+                      message.success('Cập nhật ảnh đại diện thành công!');
+                      await refreshUser();
+                      onSuccess();
+                    } catch (err) {
+                      message.error(err.message || 'Lỗi khi tải ảnh đại diện');
+                      onError(err);
+                    } finally {
+                      setUploadingAvatar(false);
+                    }
+                  }}
+                >
+                  <Button
+                    size="small"
+                    icon={<UploadOutlined />}
+                    loading={uploadingAvatar}
+                    style={{ borderRadius: 6, fontSize: 12 }}
+                  >
+                    Đổi ảnh đại diện
+                  </Button>
+                </Upload>
+              </div>
               <Title level={4} style={{ margin: 0, fontWeight: 800 }}>
-                {user?.candidate_name || 'Phạm Huy Anh'}
+                {user?.candidate_name || user?.full_name || 'Ứng viên sinh viên'}
               </Title>
               <div style={{ color: '#2563eb', fontWeight: 600, fontSize: 13, marginTop: 4 }}>
-                {user?.major || 'Kỹ thuật phần mềm'}
+                {user?.major || 'Chưa cập nhật chuyên ngành'}
               </div>
               <Tag color="blue" style={{ borderRadius: 6, marginTop: 8 }}>
-                Sinh viên UTEHY (Khóa 2022 - 2026)
+                {user?.university || 'Sinh viên'}
               </Tag>
 
               <Divider style={{ margin: '18px 0' }} />
 
               <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13, color: '#475569' }}>
-                <div><BankOutlined style={{ marginRight: 8, color: '#2563eb' }} /> {user?.university || 'ĐH SPKT Hưng Yên'}</div>
-                <div><TrophyOutlined style={{ marginRight: 8, color: '#f59e0b' }} /> Điểm GPA tích lũy: <strong style={{ color: '#0f172a' }}>{user?.gpa || '3.65'}/4.0</strong></div>
-                <div><PhoneOutlined style={{ marginRight: 8, color: '#10b981' }} /> {user?.phone || '0987654321'}</div>
-                <div><EnvironmentOutlined style={{ marginRight: 8, color: '#6366f1' }} /> {user?.address || 'Hưng Yên / Hà Nội'}</div>
+                <div><BankOutlined style={{ marginRight: 8, color: '#2563eb' }} /> {user?.university || 'Chưa cập nhật trường học'}</div>
+                <div><TrophyOutlined style={{ marginRight: 8, color: '#f59e0b' }} /> Điểm GPA tích lũy: <strong style={{ color: '#0f172a' }}>{user?.gpa ? `${user.gpa}/4.0` : 'Chưa cập nhật'}</strong></div>
+                <div><PhoneOutlined style={{ marginRight: 8, color: '#10b981' }} /> {user?.phone || 'Chưa cập nhật SĐT'}</div>
+                <div><EnvironmentOutlined style={{ marginRight: 8, color: '#6366f1' }} /> {user?.address || 'Chưa cập nhật địa chỉ'}</div>
               </div>
             </Card>
           </Col>
@@ -140,12 +176,12 @@ export default function CandidateProfilePage() {
                       label="Họ và tên"
                       rules={[{ required: true, message: 'Vui lòng nhập họ tên' }]}
                     >
-                      <Input placeholder="Phạm Huy Anh" />
+                      <Input placeholder="Nhập họ và tên đầy đủ..." />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={12}>
                     <Form.Item name="phone" label="Số điện thoại liên hệ">
-                      <Input placeholder="0987654321" />
+                      <Input placeholder="Nhập số điện thoại liên hệ..." />
                     </Form.Item>
                   </Col>
                 </Row>

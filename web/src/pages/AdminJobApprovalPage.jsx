@@ -207,6 +207,7 @@ export default function AdminJobApprovalPage() {
             rowKey="id"
             loading={loading}
             pagination={{ pageSize: 8 }}
+            scroll={{ x: true }}
           />
         </Card>
       </div>

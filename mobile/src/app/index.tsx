@@ -14,11 +14,15 @@ import {
   StatusBar,
   Image,
 } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import { getJobs, getCategories, applyJob, getMyCVs, toggleSaveJob, getSavedJobs, getJobById } from '../services/api';
 
 export default function HomeScreen() {
   const { user } = useAuth();
+  const router = useRouter();
+  // Tab Trợ lý chuyển sang đây kèm jobId để mở chi tiết tin
+  const { jobId } = useLocalSearchParams<{ jobId?: string }>();
 
   const [jobs, setJobs] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -137,6 +141,13 @@ export default function HomeScreen() {
       console.error('Error fetching job details:', e);
     }
   };
+
+  useEffect(() => {
+    if (!jobId) return;
+    openDetail({ id: Number(jobId) });
+    // Xoá param để lần sau bấm lại cùng một tin vẫn mở được
+    router.setParams({ jobId: undefined });
+  }, [jobId]);
 
   const openApply = async () => {
     if (!user) {

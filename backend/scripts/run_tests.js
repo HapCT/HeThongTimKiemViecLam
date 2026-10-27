@@ -111,7 +111,9 @@ async function run() {
         ...process.env,
         PORT: TEST_PORT,
         DB_NAME: TEST_DB_NAME,
-        SEED_PASSWORD: SEED_PASSWORD
+        SEED_PASSWORD: SEED_PASSWORD,
+        // Không gọi Gemini thật khi kiểm thử, kể cả khi .env đã có key
+        GEMINI_API_KEY: ''
       }
     });
 
@@ -144,7 +146,9 @@ async function run() {
           ...process.env,
           TEST_PORT: TEST_PORT,
           TEST_API_URL: `http://localhost:${TEST_PORT}/api`,
-          SEED_PASSWORD: SEED_PASSWORD
+          SEED_PASSWORD: SEED_PASSWORD,
+          // Test gọi thẳng service (chatbot.test.js) cũng phải dùng DB test
+          DB_NAME: TEST_DB_NAME
         },
         stdio: 'inherit'
       });

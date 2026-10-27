@@ -35,6 +35,15 @@ export default function RootLayout() {
           }}
         />
         <Tabs.Screen
+          name="chatbot"
+          options={{
+            title: 'Trợ lý',
+            tabBarIcon: ({ focused }) => (
+              <Text style={{ fontSize: 22 }}>🤖</Text>
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="applications"
           options={{
             title: 'Hồ sơ đã nộp',

@@ -280,6 +280,7 @@ export default function Navbar() {
             Job<span style={{ color: '#2563eb' }}>UTEHY</span>
           </span>
           <span
+            className="desktop-only"
             style={{
               fontSize: 11,
               fontWeight: 700,
@@ -403,7 +404,7 @@ export default function Navbar() {
 
               {/* Current user badge & dropdown */}
               <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" trigger={['click']}>
-                <div className="user-card-pill">
+                <div className="user-card-pill desktop-only">
                   <Avatar
                     size={28}
                     src={user?.avatar_url || user?.logo_url}
@@ -456,7 +457,7 @@ export default function Navbar() {
               {/* Standalone Logout Button */}
               <button
                 type="button"
-                className="btn-logout-header"
+                className="btn-logout-header desktop-only"
                 onClick={logout}
                 title="Đăng xuất khỏi hệ thống"
               >
@@ -479,7 +480,8 @@ export default function Navbar() {
                   Đăng nhập
                 </Button>
               </Link>
-              <Link to="/register">
+              {/* Đăng ký, hồ sơ, đăng xuất đã có trong Drawer nên ẩn trên điện thoại cho header không tràn ngang */}
+              <Link to="/register" className="desktop-only">
                 <Button
                   type="primary"
                   style={{

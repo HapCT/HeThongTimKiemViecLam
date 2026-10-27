@@ -184,6 +184,25 @@ const cvSchemas = {
   })
 };
 
+// 7. Chatbot Schemas
+const chatbotSchemas = {
+  chat: z.object({
+    messages: z.array(
+      z.object({
+        role: z.enum(['user', 'model'], { error: 'role phải là user hoặc model' }),
+        text: z.string({ error: 'Vui lòng nhập tin nhắn' })
+          .trim()
+          .min(1, 'Tin nhắn không được để trống')
+          .max(1000, 'Tin nhắn không được vượt quá 1000 ký tự')
+      }),
+      { error: 'Thiếu danh sách tin nhắn' }
+    )
+      .min(1, 'Thiếu danh sách tin nhắn')
+      .max(20, 'Hội thoại quá dài, vui lòng bắt đầu cuộc trò chuyện mới')
+      .refine((msgs) => msgs[msgs.length - 1].role === 'user', 'Tin nhắn cuối phải là của người dùng')
+  })
+};
+
 module.exports = {
   validate,
   authSchemas,
@@ -191,5 +210,6 @@ module.exports = {
   applicationSchemas,
   interviewSchemas,
   reviewSchemas,
-  cvSchemas
+  cvSchemas,
+  chatbotSchemas
 };

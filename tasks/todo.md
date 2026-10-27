@@ -6,6 +6,88 @@ Dấu [x] dưới đây chỉ dành cho mục đã được đối chiếu trong
 
 ---
 
+## ✅ Chatbot gợi ý việc làm (làm ngày 27/10, đã chạy thật với Gemini, chưa commit)
+Đã chốt: gợi ý việc làm từ bảng `jobs`; dùng Gemini API; có trên web và mobile; ai cũng dùng được (kể cả khách); không lưu lịch sử vào CSDL; chưa có API key.
+
+**Cách hoạt động:** người dùng gõ câu hỏi → backend gửi câu đó cho Gemini kèm một hàm `search_jobs` (từ khoá, địa điểm, loại hình, lương tối thiểu). Gemini tự quyết định tham số, backend chạy truy vấn thật (chỉ tin `approved`, chưa hết hạn, chưa xoá), trả kết quả lại cho Gemini viết câu trả lời. API trả về `{ reply, jobs: [...] }` để giao diện hiện thẻ tin có link. Bot không tự bịa tin, vì danh sách tin luôn lấy từ CSDL.
+
+### Backend
+- [x] Cài `@google/genai` 2.31; thêm `GEMINI_API_KEY`, `GEMINI_MODEL` (mặc định `gemini-flash-latest`) vào `.env.example`.
+- [x] Tách phần dựng điều kiện lọc của `jobController.getJobs` thành `services/jobSearch.js` (`buildJobFilters`); trang tìm việc và chatbot dùng chung.
+- [x] `services/chatbotService.js`: lời dặn hệ thống, hàm `search_jobs`, tối đa 3 lượt gọi hàm (lượt cuối tắt tools để model buộc phải trả lời); lọc lại tham số model gửi (`sanitizeSearchArgs`); mỗi lần tìm tối đa 5 tin.
+- [x] `POST /api/chatbot`: zod kiểm `messages` (1–20 tin, mỗi tin 1–1000 ký tự, tin cuối phải của người dùng); chỉ gửi 10 tin gần nhất; rate limit riêng 20 lượt/15 phút/IP. Thiếu key → 503; Gemini lỗi → 502.
+  - Khác kế hoạch: không gắn `optionalAuth` vì chatbot không dùng thông tin người dùng.
+- [x] `run_tests.js`: server test chạy với `GEMINI_API_KEY` rỗng (không tốn tiền, kết quả ổn định kể cả khi `.env` đã có key); tiến trình test dùng `DB_NAME` của DB test.
+
+### Web
+- [x] `components/ChatbotWidget.jsx`: nút nổi góc phải dưới, khung chat 380px, 3 câu gợi ý, thẻ việc làm bấm vào mở `/jobs/:id`; timeout riêng 30 giây. Gắn trong `App.jsx`.
+
+### Mobile
+- [x] Tab "Trợ lý" (`src/app/chatbot.tsx`), hàm `sendChatMessage` trong `api.ts` (`request` nhận thêm tham số timeout, mặc định vẫn 15 giây). Bấm thẻ việc làm → chuyển về tab Việc làm kèm `jobId`, tab đó tự mở modal chi tiết.
+
+### Kiểm chứng
+- [x] Backend `npm test`: 51/51 (40 cũ + 11 mới trong `tests/chatbot.test.js`): chỉ trả tin approved/còn hạn/chưa xoá; tìm đúng tên tin pending vẫn không lộ; lọc loại hình + địa điểm; bỏ tham số sai từ model; vòng gọi hàm với Gemini giả (có gọi hàm, không gọi hàm, gọi mãi thì dừng sau 3 lượt); API 400 ×3 và 503.
+- [x] Web: `npm run build` được; lint vẫn 28 cảnh báo như trước, file mới không có cảnh báo.
+- [x] Mobile: `npx tsc --noEmit` không lỗi; `npx expo export --platform android` đóng gói được.
+- [x] Trình duyệt (web của bạn ở cổng 3000, backend cổng 5000): mở khung chat, bấm câu gợi ý → hiện "Chatbot chưa được cấu hình trên máy chủ". Giả lập phản hồi `/chatbot` bằng 3 tin thật → thẻ hiển thị đúng, tự cuộn xuống cuối, bấm thẻ mở `/jobs/2`.
+- [x] Đã có key trong `backend/.env` (file bị git bỏ qua). Chạy thật với Gemini: "Tìm thực tập React ở Hà Nội" → 4,2 giây, trả đúng tin số 1 (FPT, thực tập, Hà Nội); "bán thời gian lương từ 5 triệu" → 4,8 giây, báo không có tin và gợi ý nới điều kiện (đối chiếu CSDL: đúng là không có tin part_time nào).
+- [x] Sửa sau khi chạy thật:
+  - `gemini-flash-latest` hay báo 503 quá tải, các bản 2.5 đã ngừng cấp cho người dùng mới (404). Model mặc định đổi thành `gemini-flash-lite-latest`.
+  - SDK mặc định tự thử lại 5 lần nên lần gọi đầu treo hơn 90 giây. Đổi thành không thử lại, tối đa 15 giây mỗi lần gọi, để người dùng nhận thông báo "Trợ lý đang bận" (502).
+- [x] Đổi sang key mới (key cũ hết 500 lượt/ngày của gói miễn phí). Chạy thật ngày 27/10:
+  - Qua API: "Tester" → báo không có tin; đúng, vì tin Tester duy nhất (id 13) đang chờ duyệt. "Thủ đô của Pháp" → từ chối lịch sự. "Thực tập ở Hưng Yên" → tin 12 Rikkeisoft, 3 giây.
+  - Trên web: "Tìm thực tập React ở Hà Nội" → thẻ tin FPT; hỏi nối tiếp "Còn vị trí nào khác ở Hà Nội?" → 5 tin, nghĩa là bot nhớ ngữ cảnh hội thoại.
+- [x] Sửa sau khi chạy thật lần 2:
+  - Thời gian Gemini trả lời dao động 1–27 giây mỗi lượt gọi. Giới hạn nâng lên 30 giây mỗi lượt; web/mobile chờ tối đa 70 giây.
+  - Bot viết markdown (`**...**`) mà giao diện hiện nguyên văn. Đã thêm lời dặn "văn bản thuần, không markdown". Lần đầu viết "chữ thường" thì model hiểu thành viết thường toàn bộ; đã sửa câu dặn, kiểm lại: viết hoa và ghi số bình thường.
+- [ ] Gemini gói miễn phí chập chờn: có lúc trả 503/hết giờ, khi đó bot báo "Trợ lý đang bận", đúng như thiết kế. Hỏi lại sau ít phút là được.
+- [ ] Hai key đã lộ trong lịch sử chat: nên tạo key mới ở AI Studio, thay vào `.env`, xoá hai key cũ.
+- Kiểm lại sau thay đổi: backend 51/51, web build được, mobile `tsc` không lỗi.
+- [ ] Chưa chạy tab Trợ lý trên Expo Go.
+- Ngoài phạm vi: cập nhật báo cáo Word (đợt trước đã bỏ chữ "chatbot" khỏi báo cáo); làm khi chatbot chạy thật.
+
+### Review
+- Chatbot không viết SQL riêng: dùng chung `buildJobFilters` với trang tìm việc, nên quy tắc "khách chỉ thấy tin approved còn hạn" chỉ nằm một chỗ.
+- Không tin dữ liệu model trả về: tham số được lọc lại trước khi vào truy vấn, danh sách tin trả cho giao diện lấy từ CSDL chứ không từ chữ model viết.
+- ✅ Đã sửa (27/10): ở màn hình 375px cả site tràn ngang tới 527px, đẩy khung chat lệch phải.
+  - Nguyên nhân 1, ở `Navbar.jsx`: header điện thoại xếp logo, nhãn "Việc Làm & Thực Tập", Đăng nhập, Đăng ký, nút menu, đều không co. Sửa: thêm `desktop-only` cho nhãn, nút Đăng ký, thẻ tên người dùng và nút Đăng xuất (Drawer đã có đủ các mục này). Header điện thoại còn logo + Đăng nhập (khách) hoặc chuông (+ Đăng tin cho doanh nghiệp) + menu.
+  - Nguyên nhân 2, ở `JobCard.jsx`, chỉ khi là sinh viên: nhãn "ĐÃ ỨNG TUYỂN (ACCEPTED)" không xuống dòng và nút tim bị đẩy ra ngoài. Sửa: hàng dưới `flexWrap`, `Space wrap`, khối tiêu đề `minWidth: 0`.
+  - Kiểm ở 375px: khách (6 trang), sinh viên (7), doanh nghiệp (5), admin (4) đều rộng đúng 375px; khung chat nằm gọn từ 16 đến 359px; Drawer vẫn có Đăng nhập/Đăng ký. Ở 1280px header giữ nguyên như cũ. Build được, lint vẫn 28. Đăng nhập thử bằng token ký từ `JWT_SECRET` local, hết hạn sau 1 giờ, đã xoá file token sau khi dùng.
+- Phát hiện lỗi có sẵn, chưa sửa: CORS chỉ cho `localhost:3000`; nếu Vite tự nhảy sang cổng khác (3001) thì mọi API trả "Lỗi hệ thống máy chủ" (500) thay vì báo lỗi CORS.
+
+---
+
+## ✅ Kiểu tiêu đề chương 4, mục lục, danh mục bảng và hình (đã làm ngày 26/10)
+- [x] Tiêu đề chương 4 → kiểu "Heading 1" như chương 1–3 (Word tự đánh "CHƯƠNG 4:", đã bỏ chữ gõ tay); đặt "sang trang mới" để chương 4 bắt đầu ở đầu trang.
+- [x] Mục 4.1–4.4 → "Mục lớn" (4 mục); mục 4.x.y → "MucNho" (9 mục); giữ số gõ tay như chương 1–2, tắt đánh số tự động.
+- [x] "KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN" → kiểu "Tiêu đề" như "TÀI LIỆU THAM KHẢO".
+- [x] 19 chú thích hình → kiểu "Hình"; 6 chú thích bảng → kiểu mới "Chú thích bảng" (sao từ chú thích Bảng 3.1).
+- [x] Chèn danh mục tự động dưới "DANH MỤC CÁC BẢNG" (6 bảng) và "DANH MỤC CÁC HÌNH VẼ" (19 hình).
+- [x] Cập nhật mục lục: đủ chương 1–4, mục 4.x, Kết luận, Tài liệu tham khảo; bỏ 2 dòng cũ không có nội dung (3.2.3 Biểu đồ lớp phân tích ca sử dụng, 3.3 Thiết kế giao diện).
+- [x] Sửa thêm: chữ "d" thừa cuối chương 2 lần trước chưa xoá hẳn (lệnh xoá chỉ xoá dấu xuống dòng), nay đã xoá.
+- [x] Kiểm tra trên bản sao: bản Accept All dài 38 trang; xem trang mục lục (5–6), danh mục bảng (8), danh mục hình (9), đầu chương 4 (24), Kết luận (36).
+- [x] Sao lưu trước bước này: `Báo cáo đồ án 4_truoc_muc_luc_2610.docx`. File thật có 236 chỗ sửa được theo dõi; chế độ Track Changes đang tắt để các sửa tiếp theo của bạn không bị ghi lại.
+- Lưu ý: sau khi Accept All, bấm chuột phải vào mục lục và hai danh mục → Update Field → Update entire table để số trang khớp bản cuối.
+
+## ✅ Cập nhật "Báo cáo đồ án 4.docx" theo code hiện tại (đã làm ngày 26/10)
+Báo cáo sửa lần cuối 13/10, trước toàn bộ đợt sửa code. Chỉ sửa nội dung chữ và bảng, không đổi định dạng.
+
+- [x] Sao lưu: `Báo cáo đồ án 4_truoc_cap_nhat_2610.docx` (bản gốc nguyên vẹn).
+- [x] Sửa bằng Word với Theo dõi thay đổi (Track Changes): 200 chỗ sửa, chạy trên bản sao trước rồi mới chép đè file thật. Word ghi tên tác giả là tài khoản Office của bạn (không đổi được), nhưng file gốc không có thay đổi nào được theo dõi, nên cả 200 chỗ đều là của đợt này.
+- [x] 🔴 Bỏ Firebase, chat/chatbot, thanh toán, `payments`, `device_tokens`, Quick Switcher, "12 bảng"; sửa phần bảo mật (JWT + bcrypt), hạn chế về email, TC13.
+- [x] 🟠 Bảng 3.4 (11 lớp, sửa dòng candidates, thêm companies, company_reviews, password); phiên bản Vite 8, Express 5, Ant Design 6, Expo SDK 57; cấu trúc thư mục (mobile/, tests/, job_system.sql); TC01–TC04; mâu thuẫn về mobile; "xác thực MST" thành đối soát qua API VietQR.
+- [x] 🟢 Bổ sung: các lớp bảo mật (3.2.4), đánh giá doanh nghiệp, lưu việc làm, upload CV, thông báo, xuất Excel; mục 4.2.5 Ứng dụng di động (kèm ô chèn ảnh Hình 4.17); đoạn kiểm thử tự động 40 ca; TC15–TC18 (phân quyền, tải CV, tệp sai định dạng, đánh giá).
+- [x] ⚪ Bỏ chữ "d" thừa; "nhóm" → "em"; chú thích Bảng 3.3; thuật ngữ thêm API, REST, JWT, SPA, UI, CSDL; thay 2 sách PHP bằng tài liệu React, Expo; bỏ các từ khoe khoang ("xuất sắc", "nổi bật", "toàn diện"...).
+- [ ] Mục lục: **chưa cập nhật** vì chương 4 và Kết luận đang dùng kiểu Normal, không phải Heading; bấm Update Field lúc này sẽ làm chương 4 biến mất khỏi mục lục. Cần đặt kiểu Heading cho các tiêu đề chương 4 trước (nên làm theo báo cáo mẫu của trường).
+- [ ] Bạn tự làm: duyệt các chỗ sửa trong Word (Review > Accept/Reject), rồi Accept All trước khi nộp; chụp 17 ảnh giao diện; viết mục 3.2.3, 3.3.
+
+**Kiểm chứng**
+- [x] Bản "Accept All" xuất PDF được: 33 → 36 trang, 3 ảnh có sẵn vẫn còn, thêm 1 bảng (ô chèn ảnh Hình 4.17).
+- [x] Dò toàn văn bản PDF: không còn "Firebase", "chatbot", "payments", "device_tokens", "12 bảng", "Quick Switcher", "Vite 5", "xuất sắc", "thanh toán phí", "nhóm vận dụng".
+- [x] Xem trực tiếp các trang có sửa (bảng use case, Bảng 3.4, bảo mật, cấu trúc thư mục, mục 4.2.5, bảng kiểm thử, kết luận, thuật ngữ): định dạng khớp với phần xung quanh.
+
+---
+
 ## ✅ Dọn file thừa và cảnh báo lint (đã làm ngày 26/10, chưa commit)
 Đã kiểm kê bằng cách dò xem file nào được import/tham chiếu ở đâu. Theo lựa chọn của bạn, giữ nguyên các bản backup `.docx` và `.vpp.bak_*` ở thư mục gốc.
 

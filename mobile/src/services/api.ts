@@ -51,7 +51,7 @@ export async function getStoredUser(): Promise<any | null> {
   }
 }
 
-async function request(endpoint: string, options: RequestInit = {}) {
+async function request(endpoint: string, options: RequestInit = {}, timeoutMs = 15000) {
   const token = await getToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -62,9 +62,9 @@ async function request(endpoint: string, options: RequestInit = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  // Timeout 15 giây
+  // Mặc định timeout 15 giây
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   let response: Response;
   try {
@@ -76,7 +76,7 @@ async function request(endpoint: string, options: RequestInit = {}) {
   } catch (netErr: any) {
     clearTimeout(timeoutId);
     if (netErr.name === 'AbortError') {
-      throw new Error('Yêu cầu đã hết thời gian chờ kết nối (quá 15 giây). Vui lòng thử lại.');
+      throw new Error(`Yêu cầu đã hết thời gian chờ kết nối (quá ${timeoutMs / 1000} giây). Vui lòng thử lại.`);
     }
     throw new Error('Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng của bạn.');
   } finally {
@@ -238,4 +238,16 @@ export async function toggleSaveJob(jobId: number | string) {
     method: 'POST',
     body: JSON.stringify({ job_id: jobId }),
   });
+}
+
+// ==================== CHATBOT ====================
+export type ChatMessage = { role: 'user' | 'model'; text: string };
+
+// Mỗi câu hỏi gọi Gemini 2 lượt (tra CSDL rồi trả lời), mỗi lượt có thể tới 30 giây
+export async function sendChatMessage(messages: ChatMessage[]) {
+  const res = await request('/chatbot', {
+    method: 'POST',
+    body: JSON.stringify({ messages }),
+  }, 70000);
+  return res.data as { reply: string; jobs: any[] };
 }

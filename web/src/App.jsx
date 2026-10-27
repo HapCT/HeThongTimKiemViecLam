@@ -6,6 +6,7 @@ import viVN from 'antd/locale/vi_VN';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import ChatbotWidget from './components/ChatbotWidget';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Lazy load pages for optimized bundle splitting
@@ -182,6 +183,7 @@ export default function App() {
               </Suspense>
             </main>
             <Footer />
+            <ChatbotWidget />
           </div>
         </BrowserRouter>
       </AuthProvider>

@@ -127,8 +127,8 @@ export default function JobCard({ job, onSelect }) {
 
         {/* Content details */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
               <Title
                 level={5}
                 style={{
@@ -203,6 +203,8 @@ export default function JobCard({ job, onSelect }) {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 8,
               marginTop: 14,
               paddingTop: 12,
               borderTop: '1px solid #f1f5f9',
@@ -210,7 +212,7 @@ export default function JobCard({ job, onSelect }) {
               color: '#94a3b8'
             }}
           >
-            <Space size={16}>
+            <Space size={[16, 4]} wrap>
               <span>
                 <UsergroupAddOutlined style={{ marginRight: 4 }} />
                 {job.applicant_count || 0} hồ sơ đã ứng tuyển

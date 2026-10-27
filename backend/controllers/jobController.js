@@ -1,4 +1,5 @@
 const { pool } = require('../config/db');
+const { buildJobFilters } = require('../services/jobSearch');
 
 // GET /api/jobs (Search & Filter)
 exports.getJobs = async (req, res) => {
@@ -20,8 +21,6 @@ exports.getJobs = async (req, res) => {
     const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 50);
     const safePage = Math.max(parseInt(page, 10) || 1, 1);
     const offset = (safePage - 1) * safeLimit;
-    const params = [];
-    let whereClauses = ['j.is_deleted = 0'];
 
     // Phân quyền lọc trạng thái (status):
     // - Khách vãng lai và ứng viên: bắt buộc chỉ xem 'approved' (kể cả có gửi ?status=all hay ?status=pending)
@@ -37,53 +36,9 @@ exports.getJobs = async (req, res) => {
       effectiveStatus = 'approved';
     }
 
-    if (effectiveStatus !== 'all') {
-      whereClauses.push('j.status = ?');
-      params.push(effectiveStatus);
-    }
-
-    // Ẩn các tin đã quá hạn nộp hồ sơ khi tìm kiếm việc làm công khai đang tuyển
-    if (effectiveStatus === 'approved') {
-      whereClauses.push('(j.deadline IS NULL OR j.deadline >= CURDATE())');
-    }
-
-    if (company_id) {
-      whereClauses.push('j.company_id = ?');
-      params.push(company_id);
-    }
-
-    if (category_id) {
-      whereClauses.push('j.category_id = ?');
-      params.push(category_id);
-    }
-
-    if (job_type) {
-      whereClauses.push('j.job_type = ?');
-      params.push(job_type);
-    }
-
-    if (location) {
-      whereClauses.push('j.location LIKE ?');
-      params.push(`%${location.trim()}%`);
-    }
-
-    if (keyword) {
-      whereClauses.push('(j.title LIKE ? OR j.description LIKE ? OR comp.name LIKE ?)');
-      const kw = `%${keyword.trim()}%`;
-      params.push(kw, kw, kw);
-    }
-
-    if (min_salary) {
-      whereClauses.push('(j.salary_max >= ? OR j.salary_negotiable = 1)');
-      params.push(parseInt(min_salary, 10));
-    }
-
-    if (max_salary) {
-      whereClauses.push('(j.salary_min <= ? OR j.salary_negotiable = 1)');
-      params.push(parseInt(max_salary, 10));
-    }
-
-    const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+    const { whereSql, params } = buildJobFilters({
+      status: effectiveStatus, keyword, category_id, location, job_type, min_salary, max_salary, company_id
+    });
 
     // Total count query
     const countSql = `
